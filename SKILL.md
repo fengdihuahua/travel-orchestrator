@@ -5,7 +5,7 @@ display_name: 旅行规划总编排
 display_name_en: Travel Orchestrator
 description_zh: "带红方复核的旅行规划：先把潮汐、日出、月落这些改不了的时刻锁死，再倒推整条动线。开场是逐层访谈而不是问卷，自然观察专项（观鸟 / 观星 / 日出 / 赶海）先做可行性核查再决定排不排，交付前由质疑方逐项挑刺，每个数字都能追到来源。产出同源的 Markdown 攻略与单文件离线 HTML 攻略页。"
 description_en: "Travel planning with an adversarial review pass: lock the moments that cannot move (tide, sunrise, moonset), then work the route backwards. Opens with a layered interview instead of a form, checks feasibility before scheduling any nature activity, and runs an adversarial pass before delivery. Every number traces back to a source. Ships a Markdown guide plus a single-file offline HTML page."
-version: 4.6.0
+version: 4.6.1
 author: travel-orchestrator
 agent_created: true
 ---
@@ -384,8 +384,11 @@ emoji 只用于分类标记不用于强调语气。
 
 ---
 
-*v4.6.0 | travel-orchestrator 完全自包含版：主流程 S1-S10 全编排 + S6.5 红方复核（对抗式挑刺）+
+*v4.6.1 | travel-orchestrator 完全自包含版：主流程 S1-S10 全编排 + S6.5 红方复核（对抗式挑刺）+
 自然观察专项按需触发（观鸟 / 观星 / 日出 / 赶海，含火烧云评分）+ 反幻觉溯源 + 去 AI 味交付，不依赖任何其他 skill*
+
+*v4.6.1 发布后修正：`LICENSE` 恢复为纯 MIT 原文（GitHub 原先把它识别成 "Other"，
+  因为正文后面挂了中文安全提示），那段提示逐字移到 README 的「出行安全」一节。功能未动。*
 
 *v4.6.0 生成环节优化：**数据以分片为常态，不再落中间大文件**。① 行程数据固定在 `parts/*.json`
 （示例已按此形态落地，13 片、最大 3.4 KB），渲染 / 红方复核 / 校验**直接读目录就地合并**，
