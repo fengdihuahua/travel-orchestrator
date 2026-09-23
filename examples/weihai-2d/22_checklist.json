@@ -1,0 +1,34 @@
+{
+  "itinerary": {
+    "checklist": [
+      {
+        "task": "买成山头门票（确认日出时段是否单独预约）",
+        "priority": "must",
+        "status": "todo",
+        "deadline": "9/28 前",
+        "if_unresolved": "改在樱花湖东岸看日出，免费且朝东无遮挡"
+      },
+      {
+        "task": "买 10/2 返程高铁票",
+        "priority": "must",
+        "status": "todo",
+        "deadline": "9/27 前",
+        "if_unresolved": "改乘长途大巴，或顺延一天返程避开国庆返程高峰"
+      },
+      {
+        "task": "准备赶海装备（雨靴、手套、小铲子、盐瓶）",
+        "priority": "must",
+        "status": "todo",
+        "deadline": "出发前",
+        "if_unresolved": "荣成渔港附近渔具店可现买，价格比北京便宜"
+      },
+      {
+        "task": "申请 eBird Token，复核鸟种清单",
+        "priority": "optional",
+        "status": "todo",
+        "deadline": "出发前 3 天",
+        "if_unresolved": "用网上鸟况资料代替，方案里已把这条标为未核实"
+      }
+    ]
+  }
+}

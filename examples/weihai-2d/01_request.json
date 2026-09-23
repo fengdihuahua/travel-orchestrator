@@ -1,0 +1,73 @@
+{
+  "trip_id": "2026-10-01-weihai-2d",
+  "plan_version": 3,
+  "status": "conditional",
+  "status_note": "成山头门票与返程高铁票尚未落实，落实后状态可升级为已核查可用。",
+  "title": "威海 2 日 · 赶海 + 观鸟 + 日出",
+  "request": {
+    "origin": {
+      "name": "北京"
+    },
+    "dates": {
+      "start": "2026-10-01",
+      "end": "2026-10-02"
+    },
+    "companions": "2 成人",
+    "budget": {
+      "amount_max": 2500,
+      "currency": "CNY",
+      "mode": "total"
+    },
+    "pace": "轻松休闲（D1 例外早起）",
+    "interests": {
+      "must": [
+        {
+          "label": "赶海"
+        },
+        {
+          "label": "观鸟"
+        }
+      ],
+      "prefer": [
+        "观星",
+        "日出"
+      ]
+    },
+    "destination": {
+      "name": "威海"
+    },
+    "why": "两人好不容易请下来的两天，重点就是海边的日出、赶海和观鸟，吃两顿海鲜；景点数量不重要。",
+    "constraints": [
+      "不吃辣，海鲜以清蒸白灼为主",
+      "回程必须 D2 晚上到北京，不能顺延到 D3",
+      "不进入保护区核心区，只走开放观鸟点"
+    ],
+    "taste": {
+      "nature": 5,
+      "food": 4,
+      "sightseeing": 2,
+      "photo": 3
+    },
+    "risk": {
+      "weather_backup": "必须有：下雨就换博物馆与天鹅科普馆，赶海顺延到 D2 同一潮期",
+      "uncertainty": "接受方案里标注“可能去不成”，但要求写清换成什么",
+      "safety_bottom_line": "赶海严格按窗口撤离，不追着退潮往里走"
+    },
+    "nature_caps": {
+      "gear": [
+        "双筒望远镜 8x42",
+        "手机（没有长焦）",
+        "头灯",
+        "雨靴当地买"
+      ],
+      "experience": {
+        "birding": "能认常见水鸟，鸻鹬类认不准",
+        "astro": "能认北极星与猎户座",
+        "photo": "手持为主，没带三脚架"
+      },
+      "earliest_departure": "04:30",
+      "latest_return": "23:00",
+      "kid_on_mudflat": false
+    }
+  }
+}

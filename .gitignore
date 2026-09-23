@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*.bak
+*.tmp
+.DS_Store
+Thumbs.db
+
+# tools/shot.py 的截图输出、临时目录
+_shots/
+_tmp/
+
+# 本地旅行数据不入库（含个人信息与行程）
+travel-plan/
+*.local.json
+.env

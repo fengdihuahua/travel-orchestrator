@@ -1,0 +1,85 @@
+{
+  "itinerary": {
+    "days+": [
+      {
+        "day_id": "D1",
+        "date": "2026-10-01",
+        "weekday": "周四",
+        "title": "荣成滩涂：赶海、观鸟、看日落",
+        "items": [
+          {
+            "item_id": "d1-tide",
+            "time": "04:30-07:20",
+            "title": "赶海（干潮 06:08）",
+            "kind": "nature",
+            "place": "桑沟湾滩涂",
+            "booking_status": "not_required",
+            "notes": "干潮 06:08，潮位 -0.71m；滩涂裸露最广的窗口是 04:38-07:38。带雨靴、手套、小铲子、盐瓶。07:20 开始往岸上撤。"
+          },
+          {
+            "item_id": "d1-breakfast",
+            "time": "07:40-09:00",
+            "title": "早餐 + 回住地休整补觉",
+            "kind": "meal",
+            "place": "荣成市区",
+            "booking_status": "not_required",
+            "notes": "四点半起床，这一觉必须补，否则下午和晚上都撑不住。"
+          },
+          {
+            "item_id": "d1-bird",
+            "time": "09:30-11:30",
+            "title": "保护区观鸟",
+            "kind": "nature",
+            "place": "荣成大天鹅保护区开放观鸟点",
+            "booking_status": "not_required",
+            "notes": "退潮后水鸟仍在滩面觅食。只在开放观鸟点活动，不进禁入滩涂。"
+          },
+          {
+            "item_id": "d1-lunch",
+            "time": "12:00-13:30",
+            "title": "海鲜午餐（市场代加工）",
+            "kind": "meal",
+            "place": "荣成渔港码头",
+            "booking_status": "not_required",
+            "notes": "自己挑海鲜，找档口加工，加工费按斤算。节假日中午排队约 30 分钟。"
+          },
+          {
+            "item_id": "d1-rest",
+            "time": "15:00-17:30",
+            "title": "樱花湖散步 + 看日落 17:37",
+            "kind": "visit",
+            "place": "荣成樱花湖",
+            "booking_status": "not_required"
+          },
+          {
+            "item_id": "d1-dinner",
+            "time": "18:30-19:30",
+            "title": "晚餐",
+            "kind": "meal",
+            "place": "荣成市区",
+            "booking_status": "not_required"
+          },
+          {
+            "item_id": "d1-star",
+            "time": "21:30-23:00",
+            "title": "观星（月面与亮星团）",
+            "kind": "nature",
+            "place": "荣成海边暗点",
+            "booking_status": "not_required",
+            "notes": "月照约 75%，今晚只看月面和亮星团；深空目标改到月落之后的日期。海边夜风大，带厚外套。"
+          }
+        ],
+        "alternatives": [
+          {
+            "title": "全天下雨 → 改荣成博物馆、天鹅科普馆，赶海顺延到 D2 清晨同一潮期",
+            "trigger": "日降水 > 5mm 或海面风力 6 级以上"
+          },
+          {
+            "title": "夜间云量 > 60% → 改为住地休息，观星移到 D2 无望则放弃",
+            "trigger": "云量 > 60%"
+          }
+        ]
+      }
+    ]
+  }
+}

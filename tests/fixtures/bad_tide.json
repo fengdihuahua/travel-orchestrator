@@ -1,0 +1,33 @@
+{
+  "trip_id": "redteam-tide",
+  "plan_version": 1,
+  "status": "draft",
+  "request": {
+    "origin": {"name": "威海"},
+    "dates": {"start": "2026-09-25", "end": "2026-09-25"},
+    "companions": "1 人",
+    "budget": {"amount_max": 500, "currency": "CNY", "mode": "total"}
+  },
+  "itinerary": {
+    "weather": {"kind": "seasonal", "summary": "-"},
+    "nature": {
+      "beachcombing": {"tide_summary": "干潮 06:08（-0.71m）", "best_window": "05:00-08:30"}
+    },
+    "days": [
+      {"day_id": "D1", "date": "2026-09-25",
+       "items": [{"item_id": "a1", "time": "05:00-08:30", "title": "赶海"}],
+       "alternatives": [{"title": "下雨改为室内", "trigger": "降水 > 5mm"}]}
+    ],
+    "food": [],
+    "budget": {"currency": "CNY", "categories": []},
+    "checklist": []
+  },
+  "pitfalls": [{"title": "占位", "detail": "占位"}],
+  "facts": [
+    {"fact_id": "f1", "claim": "威海 09-25 干潮 06:08", "status": "verified", "source_ids": ["s1"]}
+  ],
+  "sources": [
+    {"source_id": "s1", "name": "Open-Meteo Marine API", "kind": "api",
+     "url": "https://marine-api.open-meteo.com/v1/marine", "retrieved_at": "2026-09-22"}
+  ]
+}

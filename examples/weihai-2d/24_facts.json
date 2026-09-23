@@ -1,0 +1,67 @@
+{
+  "facts": [
+    {
+      "fact_id": "f1",
+      "claim": "威海 2026-10-01 日出 05:45、日落 17:37（当地时间 UTC+8）",
+      "value": "sunrise 05:45 / sunset 17:37",
+      "status": "verified",
+      "source_ids": [
+        "s1"
+      ]
+    },
+    {
+      "fact_id": "f2",
+      "claim": "威海 2026-10-01 干潮 06:08（-0.71m，MSL 基准）；接口数据仅覆盖至 07:00，属部分数据",
+      "value": "低潮 06:08 / -0.71m",
+      "status": "estimated",
+      "source_ids": [
+        "s2"
+      ]
+    },
+    {
+      "fact_id": "f3",
+      "claim": "观星条件：2026-09-22 实测月照 80.3%（亏凸月）、无月暗夜 145.8 分钟；10/1 月相需临近复查",
+      "value": "80.3% / 145.8 min",
+      "status": "estimated",
+      "source_ids": [
+        "s3"
+      ]
+    },
+    {
+      "fact_id": "f4",
+      "claim": "荣成大天鹅保护区近期记录到黑嘴鸥、蛎鹬等水鸟（未用 eBird Token 复核）",
+      "value": null,
+      "status": "unverified",
+      "source_ids": [
+        "s4"
+      ]
+    },
+    {
+      "fact_id": "f5",
+      "claim": "荣成到威海站车程约 1 小时，打车约 120 元",
+      "value": "约 60 分钟 / 约 ¥120",
+      "status": "estimated",
+      "source_ids": [
+        "s4"
+      ]
+    },
+    {
+      "fact_id": "f6",
+      "claim": "威海 2026-10-01 日出霞光（火烧云）评分 2/3，等级「较好」，依据为中高云 9%、低云 9%、能见度 23km、湿度 53%",
+      "value": "2/3（较好）",
+      "status": "estimated",
+      "source_ids": [
+        "s6"
+      ]
+    },
+    {
+      "fact_id": "f7",
+      "claim": "威海 2026-10-01 逐时潮位（Open-Meteo Marine，00:00 起 1.69m 一路退到 06:00 的 -0.71m，07:00 回涨到 -0.60m），08:00 之后接口无数据",
+      "value": "1.69m → -0.71m → -0.60m",
+      "status": "estimated",
+      "source_ids": [
+        "s2"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "itinerary": {
+    "days+": [
+      {
+        "day_id": "D2",
+        "date": "2026-10-02",
+        "weekday": "周五",
+        "title": "成山头日出 + 环海路，下午返程",
+        "items": [
+          {
+            "item_id": "d2-sun",
+            "time": "05:00-06:30",
+            "title": "成山头看日出（05:46）",
+            "kind": "nature",
+            "place": "成山头景区",
+            "booking_status": "todo",
+            "notes": "04:50 前到观景台占位。景区停车位少，节假日 5:30 后基本满，建议打车或提前停外围。"
+          },
+          {
+            "item_id": "d2-rest",
+            "time": "07:00-09:00",
+            "title": "早餐 + 补眠",
+            "kind": "rest",
+            "place": "荣成住地",
+            "booking_status": "not_required"
+          },
+          {
+            "item_id": "d2-ride",
+            "time": "09:30-12:00",
+            "title": "环海路骑行",
+            "kind": "visit",
+            "place": "荣成环海路",
+            "booking_status": "not_required",
+            "notes": "共享单车沿线可还车。逆时针骑风景更好，但东北风天顶风吃力。"
+          },
+          {
+            "item_id": "d2-lunch",
+            "time": "12:30-13:30",
+            "title": "午餐",
+            "kind": "meal",
+            "place": "荣成市区",
+            "booking_status": "not_required"
+          },
+          {
+            "item_id": "d2-go",
+            "time": "13:40-14:40",
+            "title": "前往威海站",
+            "kind": "transport",
+            "place": "威海站",
+            "booking_status": "not_required",
+            "notes": "荣成到威海站约 1 小时，打车约 120 元，城际巴士班次较疏。这段路不能卡点。"
+          },
+          {
+            "item_id": "d2-train",
+            "time": "15:30",
+            "title": "返程高铁",
+            "kind": "transport_major",
+            "place": "威海站",
+            "booking_status": "todo",
+            "notes": "车次与准确发车时间待定，购票后填入。方案不预设车次，避免按错时间赶车。"
+          }
+        ],
+        "alternatives": [
+          {
+            "title": "成山头临时管制或索道停运 → 改在樱花湖东岸看日出，同为朝东无遮挡，免费",
+            "trigger": "景区临时管制或天气原因关闭"
+          },
+          {
+            "title": "骑行遇大风 → 改环海路自驾或景区电瓶车，行程顺延 1 小时",
+            "trigger": "海面风力 6 级以上"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,83 @@
+{
+  "red_team": {
+    "reviewer": "red-team",
+    "verdict": "有条件通过",
+    "open_blocking": 0,
+    "rounds": [
+      {
+        "round": 1,
+        "scope": "时间/地理/成本/安全/事实/体感",
+        "findings": [
+          {
+            "finding_id": "rt-001",
+            "severity": "blocking",
+            "category": "safety",
+            "target": "D1 赶海 08:30-10:30",
+            "challenge": "方案写「干潮 09:12」，用 Open-Meteo Marine 实测 10/1 干潮是 06:08，且数据只覆盖到 07:00。按原窗口出动时潮水已在回涨，滩涂深处有被困风险。",
+            "action": "窗口改为 04:38-07:38，行程项改为 04:30-07:20，并写入「07:20 开始撤离」。",
+            "status": "resolved"
+          },
+          {
+            "finding_id": "rt-002",
+            "severity": "major",
+            "category": "fact",
+            "target": "自然专项/赶海",
+            "challenge": "「09:12（0.4m）」在任何数据源里都查不到，是凭空写下的数字。",
+            "action": "替换为实测值 06:08 / -0.71m，并在方案中标明 MSL 基准偏差与部分数据状态。",
+            "status": "resolved"
+          },
+          {
+            "finding_id": "rt-003",
+            "severity": "major",
+            "category": "budget",
+            "target": "预算合计",
+            "challenge": "分项上限合计 2600 元，超出用户给的 2500 元预算。",
+            "action": "住宿压到 350-500，重新核算后上限合计正好 2500。",
+            "status": "resolved"
+          },
+          {
+            "finding_id": "rt-004",
+            "severity": "major",
+            "category": "fact",
+            "target": "D2 返程",
+            "challenge": "原稿写死「G456 次 15:08 发车」并标为已确认，但没有任何购票凭证，车次与时刻均未核实。",
+            "action": "改为「车次待定」，购票状态改回待办，并加入「购票后填入」的提示。",
+            "status": "resolved"
+          },
+          {
+            "finding_id": "rt-005",
+            "severity": "major",
+            "category": "timing",
+            "target": "D1 上午",
+            "challenge": "原方案把赶海排在 08:30，观鸟单排在 06:00，两者都要清晨，实际上滩涂低潮时水鸟正在同一片滩面觅食，分开排等于浪费一个清晨。",
+            "action": "合并为同一时段同一地点，上午另留保护区观鸟时段。",
+            "status": "resolved"
+          },
+          {
+            "finding_id": "rt-006",
+            "severity": "minor",
+            "category": "fact",
+            "target": "自然专项全部",
+            "challenge": "潮汐、月相、鸟况都给了具体数字，但没有一条标出来源和取数日期。",
+            "action": "补 facts / sources，逐条标状态（已核实/估算/未核实）。",
+            "status": "resolved"
+          },
+          {
+            "finding_id": "rt-007",
+            "severity": "minor",
+            "category": "structure",
+            "target": "D2",
+            "challenge": "D2 没有备选方案，成山头一旦管制就没有退路。",
+            "action": "补两条带触发条件的备选，备选点（樱花湖东岸）同为朝东无遮挡。",
+            "status": "resolved"
+          }
+        ]
+      },
+      {
+        "round": 2,
+        "scope": "复核第 1 轮修改后是否引入新问题",
+        "findings": []
+      }
+    ]
+  }
+}

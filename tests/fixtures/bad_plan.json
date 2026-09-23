@@ -1,0 +1,40 @@
+{
+  "trip_id": "redteam-bad",
+  "plan_version": 1,
+  "status": "conditional",
+  "request": {
+    "origin": {"name": "北京"},
+    "dates": {"start": "2026-09-25", "end": "2026-09-25"},
+    "companions": "2 成人",
+    "budget": {"amount_max": 1000, "currency": "CNY", "mode": "total"}
+  },
+  "itinerary": {
+    "weather": {"kind": "seasonal", "summary": "秋"},
+    "nature": {
+      "sunrise": {"sunrise": "05:53", "sunset": "17:35"},
+      "stargazing": {"moon_phase": "满月 100%", "rating": "5/5 星"},
+      "beachcombing": {"tide_summary": "09:12 干潮（0.4m）", "best_window": "06:00-07:30"}
+    },
+    "days": [
+      {
+        "day_id": "D1",
+        "date": "2026-09-25",
+        "weekday": "周五",
+        "items": [
+          {"item_id": "x1", "time": "06:00-08:00", "title": "日出观赏"},
+          {"item_id": "x1", "time": "07:30-09:00", "title": "赶海"},
+          {"item_id": "x3", "time": "23:00-24:30", "title": "观星"}
+        ]
+      }
+    ],
+    "food": [],
+    "budget": {"currency": "CNY", "categories": [{"name": "住宿", "min": 900, "max": 800}]},
+    "checklist": []
+  },
+  "pitfalls": [],
+  "facts": [
+    {"fact_id": "f1", "claim": "潮汐干潮 09:12", "status": "verified"},
+    {"fact_id": "f2", "claim": "门票", "status": "unknown", "value": 120}
+  ],
+  "sources": []
+}

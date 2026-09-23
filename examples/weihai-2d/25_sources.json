@@ -1,0 +1,44 @@
+{
+  "sources": [
+    {
+      "source_id": "s1",
+      "name": "Sunrise-Sunset.org API",
+      "kind": "api",
+      "url": "https://api.sunrise-sunset.org/json",
+      "retrieved_at": "2026-09-22"
+    },
+    {
+      "source_id": "s2",
+      "name": "Open-Meteo Marine API（潮位）",
+      "kind": "api",
+      "url": "https://marine-api.open-meteo.com/v1/marine",
+      "retrieved_at": "2026-09-22"
+    },
+    {
+      "source_id": "s3",
+      "name": "CycleCalcs Astronomy API",
+      "kind": "api",
+      "url": "https://www.cyclecalcs.com/v2/today",
+      "retrieved_at": "2026-09-22"
+    },
+    {
+      "source_id": "s4",
+      "name": "网上公开资料整理（未用官方接口复核）",
+      "kind": "web_search",
+      "retrieved_at": "2026-09-22"
+    },
+    {
+      "source_id": "s5",
+      "name": "中央气象台城市预报（人工查询）",
+      "kind": "web_search",
+      "retrieved_at": "2026-09-22"
+    },
+    {
+      "source_id": "s6",
+      "name": "Open-Meteo Forecast + Air Quality API（霞光自建评分模型）",
+      "kind": "api",
+      "url": "https://api.open-meteo.com/v1/forecast",
+      "retrieved_at": "2026-09-22"
+    }
+  ]
+}

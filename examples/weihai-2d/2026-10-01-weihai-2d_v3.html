@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>威海 2 日 · 赶海 + 观鸟 + 日出 · 旅行方案</title>
+<style>/* ==========================================================================
+   travel-orchestrator 交付物样式表 v3.0.0
+   风格：B站配色（弹幕粉 × 番剧蓝）× 圆体少女感 × 描边贴纸 × 布灵布灵
+   设计上下文
+     · 读者：出发前要照着走的人，多在手机上扫一眼，也会打印一份带着
+     · 语气：热闹、清爽、有精神；像番剧封面，不像 PPT 模板
+     · 记得住的三点：弹幕条、四个自然专项的场景动效、满页会闪的小星星
+   四条硬规矩
+     · 底是干净浅粉白，不用纸张纹理；图案一律用渐变画，不引任何图片文件
+     · 描边 = 1.5px 实线 + 同色系实心偏移，像贴纸，不用柔光投影
+     · 字体只用系统圆体栈（离线单文件不能引字库），标题加重、字距略放
+     · 缓动统一 ease-out-quart，只做状态变化和环境动效，不做弹跳
+   规范见 references/design-system.md
+   硬约束：不引外部样式表、不含远程图形；渲染时由 render_plan.py 内联进 HTML
+   ========================================================================== */
+
+:root{
+  /* 主色：弹幕粉 + 番剧蓝（B站那对经典色） */
+  --bb-pink:#fb7299; --bb-pink-deep:#e5457a; --bb-pink-soft:#ffe9f1;
+  --bb-pink-mist:#fff6fa;
+  --bb-blue:#00a1d6; --bb-blue-deep:#0083ad; --bb-blue-soft:#e3f6fd;
+  /* 扩展色：少女感靠这几个补 */
+  --bb-mint:#2bd6b5;  --bb-mint-soft:#e0fbf4;
+  --bb-lilac:#b48cf2; --bb-lilac-soft:#f1eaff;
+  --bb-gold:#ffb01a;  --bb-gold-soft:#fff4dc;
+  --bb-peach:#ff9f7a; --bb-lemon:#ffe066;
+  /* 中性色：全部往粉紫偏一点，不用纯黑纯白 */
+  --ink:#241f2b; --ink-2:#575060; --ink-3:#8b8495; --ink-4:#b8b2c2;
+  --bg:#fdfaff; --surface:#ffffff; --stroke:#ece4f0; --stroke-2:#d6cbe0;
+  /* 字体：拉丁走圆体，中文尽力命中系统圆体（macOS 圆体-简 / Windows 幼圆），否则回退黑体 */
+  --font-sans:'Varela Round','Quicksand','Yuanti SC','YouYuan','Hiragino Maru Gothic ProN',
+    'PingFang SC','HarmonyOS Sans SC','MiSans','Microsoft YaHei','Noto Sans CJK SC',sans-serif;
+  --font-display:'Varela Round','Quicksand','Yuanti SC','YouYuan','Hiragino Maru Gothic ProN',
+    'PingFang SC','HarmonyOS Sans SC','MiSans','Microsoft YaHei',sans-serif;
+  --font-num:'Quicksand','Varela Round','Bahnschrift','DIN Alternate','Avenir Next Condensed',
+    'Helvetica Neue',sans-serif;
+  /* 缓动：ease-out-quart */
+  --ease:cubic-bezier(.25,1,.5,1);
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:var(--font-sans);line-height:1.78;font-size:15px;
+  -webkit-font-smoothing:antialiased;
+  /* 底纹：B站加载条那三道斜纹压到几乎看不见 + 18px 圆点阵列 */
+  background-image:
+    repeating-linear-gradient(115deg,
+      rgba(251,114,153,.06) 0 2px, transparent 2px 26px,
+      rgba(0,161,214,.06) 26px 28px, transparent 28px 52px),
+    radial-gradient(circle at 1px 1px, rgba(180,140,242,.09) 1px, transparent 1.8px);
+  background-size:auto, 18px 18px;
+  background-attachment:fixed, fixed;
+}
+
+/* 布灵布灵之一：四团彩色柔光，在全页慢慢飘 —— 负 z 层，不挡任何内容 */
+body::before{
+  content:'';position:fixed;inset:-14%;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(30% 26% at 10% 6%,  rgba(251,114,153,.22), transparent 68%),
+    radial-gradient(26% 22% at 92% 4%,  rgba(0,161,214,.20), transparent 68%),
+    radial-gradient(30% 26% at 88% 74%, rgba(180,140,242,.22), transparent 70%),
+    radial-gradient(26% 22% at 12% 90%, rgba(43,214,181,.20), transparent 70%),
+    radial-gradient(22% 18% at 52% 44%, rgba(255,224,102,.16), transparent 72%);
+  animation:aura 34s var(--ease) infinite alternate;
+}
+/* 布灵布灵之二：一层薄薄的闪光斜纹，整体呼吸 */
+body::after{
+  content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background-image:repeating-linear-gradient(115deg,
+    rgba(255,255,255,.9) 0 1px, transparent 1px 30px,
+    rgba(251,114,153,.10) 30px 31px, transparent 31px 62px);
+  animation:shimmer 7s ease-in-out infinite;
+}
+.wrap{position:relative;z-index:1;max-width:940px;margin:0 auto;padding:0 18px 88px}
+
+@keyframes aura{
+  from{transform:translate3d(-1.6%,-1.2%,0) scale(1.02)}
+  to{transform:translate3d(1.6%,1.2%,0) scale(1.09)}
+}
+@keyframes shimmer{0%,100%{opacity:.5}50%{opacity:.95}}
+
+/* 布灵布灵之三：满页会闪的小星星（纯装饰，负 z 层压在内容下面） */
+.bling{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+.bling i{
+  position:absolute;width:15px;height:15px;background:currentColor;opacity:0;
+  clip-path:polygon(50% 0,58% 42%,100% 50%,58% 58%,50% 100%,42% 58%,0 50%,42% 42%);
+  animation:bling 5.2s var(--ease) infinite;
+}
+.bling i:nth-child(1){left:5%; top:12%; color:var(--bb-pink);  animation-delay:.2s}
+.bling i:nth-child(2){left:92%;top:8%;  color:var(--bb-blue);  animation-delay:1.1s;width:11px;height:11px}
+.bling i:nth-child(3){left:14%;top:34%; color:var(--bb-gold);  animation-delay:2.3s;width:10px;height:10px}
+.bling i:nth-child(4){left:88%;top:30%; color:var(--bb-lilac); animation-delay:3.4s;width:16px;height:16px}
+.bling i:nth-child(5){left:3%; top:56%; color:var(--bb-mint);  animation-delay:.9s; width:12px;height:12px}
+.bling i:nth-child(6){left:94%;top:52%; color:var(--bb-pink);  animation-delay:2.9s}
+.bling i:nth-child(7){left:9%; top:76%; color:var(--bb-blue);  animation-delay:4.2s;width:10px;height:10px}
+.bling i:nth-child(8){left:90%;top:78%; color:var(--bb-gold);  animation-delay:1.7s;width:13px;height:13px}
+.bling i:nth-child(9){left:22%;top:92%; color:var(--bb-pink);  animation-delay:3.1s;width:11px;height:11px}
+.bling i:nth-child(10){left:74%;top:94%;color:var(--bb-lilac); animation-delay:.5s; width:14px;height:14px}
+.bling i:nth-child(11){left:48%;top:6%;  color:var(--bb-mint);  animation-delay:2s;   width:9px;height:9px}
+.bling i:nth-child(12){left:64%;top:88%; color:var(--bb-blue);  animation-delay:4.6s;width:12px;height:12px}
+@keyframes bling{
+  0%{opacity:0;transform:scale(.4) rotate(0)}
+  35%{opacity:.9;transform:scale(1.05) rotate(45deg)}
+  70%{opacity:.25;transform:scale(.85) rotate(80deg)}
+  100%{opacity:0;transform:scale(.4) rotate(110deg)}
+}
+
+/* ---------------------------------------------------------------- 贴纸小图 */
+/* 所有小贴图都是内联 SVG，尺寸与位置由这里的类控制；静止时微微上下浮 */
+.stk{
+  display:inline-grid;place-items:center;flex:0 0 auto;
+  line-height:0;pointer-events:none;
+  filter:drop-shadow(1.5px 2px 0 rgba(0,0,0,.06));
+  animation:stk-float 6s var(--ease) infinite;
+}
+.stk svg{display:block;width:100%;height:100%;overflow:visible}
+@keyframes stk-float{
+  0%,100%{transform:translateY(0) rotate(-4deg)}
+  50%{transform:translateY(-4px) rotate(5deg)}
+}
+
+/* ---------------------------------------------------------------- 顶部导航 */
+.toc{
+  position:sticky;top:0;z-index:20;margin:0 -18px 24px;padding:10px 18px;
+  display:flex;gap:4px;overflow-x:auto;justify-content:center;
+  background:rgba(253,250,255,.9);border-bottom:1px solid var(--stroke);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+}
+.toc a{
+  flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;
+  font-size:13px;font-weight:700;color:var(--ink-2);text-decoration:none;
+  padding:5px 12px;border-radius:999px;border:1.5px solid transparent;white-space:nowrap;
+  transition:color .18s var(--ease),background-color .18s var(--ease),
+    border-color .18s var(--ease),transform .18s var(--ease),box-shadow .18s var(--ease);
+}
+/* 小图标：一个方块点，悬停转 45 度 */
+.toc a::before{
+  content:'';width:6px;height:6px;border-radius:2px;background:var(--ink-4);
+  transition:background-color .18s var(--ease),transform .25s var(--ease);
+}
+.toc a:hover,.toc a:focus-visible{
+  color:var(--bb-pink-deep);background:var(--bb-pink-soft);
+  border-color:rgba(251,114,153,.45);transform:translateY(-2px);
+  box-shadow:2px 2px 0 rgba(251,114,153,.22);
+}
+.toc a:hover::before{background:var(--bb-pink);transform:rotate(45deg)}
+.toc a:focus-visible{outline:2px solid var(--bb-blue);outline-offset:2px}
+section[id],body[id],details[id]{scroll-margin-top:70px}
+
+/* ---------------------------------------------------------------- 封面 */
+.cover{
+  position:relative;z-index:1;overflow:hidden;margin:0 0 30px;padding:58px 34px 58px;
+  color:#fff;
+  background:
+    repeating-linear-gradient(115deg,rgba(255,255,255,.16) 0 3px,transparent 3px 20px),
+    linear-gradient(118deg,#fb7299 0%,#ff9dc0 30%,#c9a6f5 62%,#00a1d6 100%);
+}
+/* 右下角一圈取景弧，像番剧封面的构图 */
+.cover::after{
+  content:'';position:absolute;right:-72px;bottom:-100px;width:310px;height:310px;
+  border-radius:50%;border:26px solid rgba(255,255,255,.17);
+}
+/* 封面自带一层会闪的珠光星点 */
+.cover i.spark{
+  position:absolute;background:#fff;opacity:.75;
+  clip-path:polygon(50% 0,58% 42%,100% 50%,58% 58%,50% 100%,42% 58%,0 50%,42% 42%);
+  animation:spark 4.4s var(--ease) infinite;
+}
+.cover i.spark:nth-child(1){left:6%; top:16%; width:16px;height:16px;animation-delay:.3s}
+.cover i.spark:nth-child(2){left:72%;top:12%; width:12px;height:12px;animation-delay:1.4s}
+.cover i.spark:nth-child(3){left:88%;top:44%; width:20px;height:20px;animation-delay:2.5s}
+.cover i.spark:nth-child(4){left:28%;top:72%; width:13px;height:13px;animation-delay:3.3s}
+.cover i.spark:nth-child(5){left:56%;top:84%; width:17px;height:17px;animation-delay:.9s}
+@keyframes spark{
+  0%,100%{opacity:.25;transform:scale(.7) rotate(0)}
+  50%{opacity:1;transform:scale(1.15) rotate(60deg)}
+}
+/* 封面贴纸群：飘在标题右上方 */
+.cover .stk{position:absolute;z-index:3}
+.cover .stk-s1{right:12%;top:22px;width:44px;height:44px}
+.cover .stk-s2{right:5%; top:74px;width:34px;height:34px;animation-delay:1.2s}
+.cover .stk-s3{right:22%;top:96px;width:28px;height:28px;animation-delay:2.4s}
+.cover h1{
+  position:relative;z-index:2;margin:0 0 12px;
+  font-family:var(--font-display);font-weight:900;
+  font-size:clamp(26px,4.6vw,38px);line-height:1.26;letter-spacing:.2px;
+  text-shadow:0 2px 0 rgba(0,0,0,.12);
+}
+.cover .sub{
+  position:relative;z-index:2;font-size:13px;color:rgba(255,255,255,.94);
+  margin-bottom:18px;letter-spacing:.3px;
+}
+.cover .facts{position:relative;z-index:2;display:flex;flex-wrap:wrap;gap:7px}
+/* 贴纸小片：白底深字，2px 白描边 + 蓝软影，跳在渐变上才看得清 */
+.cover .facts span{
+  background:#fff;color:var(--ink);border:2px solid rgba(255,255,255,.9);
+  border-radius:999px;padding:3px 13px;font-size:13px;font-weight:700;
+  box-shadow:2px 2px 0 rgba(0,131,173,.3);
+  transition:transform .18s var(--ease);
+}
+.cover .facts span:hover{transform:translateY(-2px) rotate(-2deg)}
+.badge{
+  display:inline-block;padding:3px 13px;font-size:12.5px;font-weight:800;
+  color:#fff;border-radius:999px;vertical-align:middle;margin-left:10px;
+  border:2px solid rgba(255,255,255,.85);letter-spacing:.4px;
+  box-shadow:2px 2px 0 rgba(0,0,0,.15);transform:rotate(-2deg);
+}
+
+/* 弹幕条：封面底部会飘的关键词，纯 CSS 位移，不占高度 */
+.danmaku{
+  position:absolute;left:0;right:0;bottom:12px;height:26px;overflow:hidden;
+  pointer-events:none;z-index:1;
+}
+.danmaku i{
+  position:absolute;left:100%;top:3px;height:20px;padding:0 11px;
+  border-radius:999px;background:rgba(255,255,255,.24);
+  border:1px solid rgba(255,255,255,.5);
+  font-size:11.5px;line-height:18px;font-style:normal;white-space:nowrap;
+  color:#fff;animation:danmaku 30s linear infinite;
+}
+.danmaku i:nth-child(2){animation-duration:36s;animation-delay:-9s;top:4px}
+.danmaku i:nth-child(3){animation-duration:27s;animation-delay:-18s;top:2px}
+.danmaku i:nth-child(4){animation-duration:41s;animation-delay:-26s;top:5px}
+.danmaku i:nth-child(5){animation-duration:33s;animation-delay:-33s;top:3px}
+@keyframes danmaku{from{transform:translateX(0)}to{transform:translateX(-140vw)}}
+
+/* ---------------------------------------------------------------- 章节标题 */
+h2{
+  position:relative;display:flex;align-items:center;gap:11px;
+  margin:50px 0 18px;font-family:var(--font-display);font-weight:900;
+  font-size:23px;letter-spacing:.2px;color:var(--ink);
+}
+/* 章节图标：一块歪着的小色牌 */
+h2 .ico{
+  flex:0 0 auto;width:32px;height:32px;display:grid;place-items:center;
+  color:#fff;background:var(--bb-pink);border-radius:11px;
+  box-shadow:2px 2px 0 var(--bb-pink-soft);transform:rotate(-3deg);
+  transition:transform .3s var(--ease),box-shadow .3s var(--ease);
+}
+h2 .ico svg{width:19px;height:19px;display:block}
+h2:hover .ico{transform:rotate(3deg) translateY(-2px)}
+h2 .stk{width:26px;height:26px}
+h2::after{
+  content:'';flex:1;height:3px;border-radius:2px;
+  background:linear-gradient(90deg,rgba(251,114,153,.6),rgba(180,140,242,.4) 50%,
+    rgba(0,161,214,.28) 75%,transparent);
+}
+/* 六色循环，让九个章节各有各的色，不至于一路粉到底 */
+.sec:nth-of-type(6n+1) h2 .ico{background:var(--bb-pink);box-shadow:2px 2px 0 var(--bb-pink-soft)}
+.sec:nth-of-type(6n+2) h2 .ico{background:var(--bb-blue);box-shadow:2px 2px 0 var(--bb-blue-soft)}
+.sec:nth-of-type(6n+3) h2 .ico{background:var(--bb-mint);box-shadow:2px 2px 0 var(--bb-mint-soft)}
+.sec:nth-of-type(6n+4) h2 .ico{background:var(--bb-lilac);box-shadow:2px 2px 0 var(--bb-lilac-soft)}
+.sec:nth-of-type(6n+5) h2 .ico{background:var(--bb-gold);box-shadow:2px 2px 0 var(--bb-gold-soft)}
+.sec:nth-of-type(6n+6) h2 .ico{background:var(--bb-peach);box-shadow:2px 2px 0 #ffe6da}
+h3{font-size:16.5px;margin:26px 0 10px;color:var(--ink);font-weight:800}
+h4{margin:0 0 8px;font-family:var(--font-display);font-weight:900;
+  font-size:17px;color:var(--ink);letter-spacing:.2px}
+
+/* ---------------------------------------------------------------- 卡片与网格 */
+.section-gap,.sec{margin:0 0 6px}
+.card{
+  position:relative;background:var(--surface);
+  border:1.5px solid var(--stroke);border-radius:16px;
+  padding:16px 18px;margin:12px 0;
+  box-shadow:3px 3px 0 var(--bb-blue-soft);
+  transition:transform .2s var(--ease),box-shadow .2s var(--ease),
+    border-color .2s var(--ease);
+}
+.card:hover{
+  transform:translate(-1px,-2px);border-color:var(--stroke-2);
+  box-shadow:4px 4px 0 var(--bb-pink-soft);
+}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+  gap:11px;margin:12px 0}
+.grid .cell{
+  position:relative;overflow:hidden;background:var(--surface);
+  border:1.5px solid var(--stroke);border-radius:14px;padding:13px 15px;
+  box-shadow:2px 2px 0 var(--bb-blue-soft);
+  transition:transform .2s var(--ease),box-shadow .2s var(--ease);
+}
+.grid .cell:hover{transform:translate(-1px,-2px);box-shadow:3px 3px 0 var(--bb-pink-soft)}
+/* 右上角点一个小方块，替代折角，和图标语言一致 */
+.grid .cell::after{
+  content:'';position:absolute;right:9px;top:9px;width:7px;height:7px;
+  border-radius:2.5px;background:var(--bb-pink);opacity:.6;
+}
+.grid .cell b{
+  display:block;font-size:11.5px;color:var(--ink-3);font-weight:800;
+  letter-spacing:.4px;margin-bottom:3px;
+}
+.grid .cell span{font-size:15px;color:var(--ink);font-family:var(--font-num);
+  font-weight:700;letter-spacing:.2px}
+
+/* 荧光笔标的关键数字：B 站粉的底线 */
+.hl{position:relative;font-family:var(--font-num);font-weight:800;padding:0 2px;z-index:0}
+.hl::after{
+  content:'';position:absolute;left:0;right:0;bottom:1px;height:7px;z-index:-1;
+  background:var(--bb-pink-soft);border-radius:3px;
+}
+
+/* ---------------------------------------------------------------- 时间轴 */
+.tl{position:relative;margin:12px 0 4px;padding-left:26px;
+  border-left:2px dashed rgba(0,161,214,.4)}
+.slot{
+  position:relative;margin:0 0 8px;padding:8px 11px;border-radius:13px;
+  transition:background-color .18s var(--ease),transform .18s var(--ease);
+}
+/* 整行悬停浮起 + 淡粉底，让人知道这条是能停留下来看的 */
+.slot:hover{background:var(--bb-pink-mist);transform:translateX(2px)}
+.slot::before{
+  content:'';position:absolute;left:-34px;top:16px;width:12px;height:12px;
+  border-radius:4.5px;background:var(--bb-pink);
+  box-shadow:0 0 0 3px var(--bg),0 0 0 4.5px rgba(251,114,153,.32);
+  transition:transform .25s var(--ease);
+}
+.slot:hover::before{transform:rotate(45deg) scale(1.15)}
+.slot .t{font-family:var(--font-num);font-weight:800;color:var(--bb-blue-deep);
+  font-size:13.5px;letter-spacing:.4px}
+.slot .ti{font-weight:800;color:var(--ink)}
+.slot .pl{color:var(--ink-2);font-size:13px}
+.slot .nt{color:var(--ink-2);font-size:13px;margin-top:3px}
+
+/* 类别标签：描边胶囊，不用实心色块 */
+.tag{
+  display:inline-block;font-size:11px;font-weight:800;padding:1px 9px;
+  border-radius:999px;margin-left:7px;vertical-align:1.5px;
+  border:1px solid currentColor;
+}
+.k-visit{color:#0083ad;background:var(--bb-blue-soft)}
+.k-meal{color:#b06a00;background:var(--bb-gold-soft)}
+.k-transport{color:#7a56cf;background:var(--bb-lilac-soft)}
+.k-nature{color:#12836b;background:var(--bb-mint-soft)}
+.k-rest{color:var(--ink-3);background:#f4f2f7}
+.k-transport_major{color:#7a56cf;background:var(--bb-lilac-soft)}
+.k-sight{color:#0083ad;background:var(--bb-blue-soft)}
+
+/* 地点链接：虚线底 + 小箭头，新窗口打开 */
+.map{
+  color:var(--bb-blue-deep);text-decoration:none;font-weight:700;
+  border-bottom:1.5px dotted rgba(0,131,173,.55);
+  transition:color .18s var(--ease),border-color .18s var(--ease);
+}
+.map::after{content:'↗';font-size:9.5px;vertical-align:2px;margin-left:2px;opacity:.75}
+.map:hover,.map:focus-visible{color:var(--bb-pink-deep);border-bottom-color:rgba(229,69,122,.6)}
+.map:focus-visible{outline:2px solid var(--bb-blue);outline-offset:2px;border-radius:4px}
+
+.alt{
+  background:var(--bb-pink-mist);border:1.5px dashed rgba(251,114,153,.4);
+  border-radius:14px;padding:10px 14px;font-size:13px;color:var(--ink-2);margin:8px 0 0;
+}
+.alt b{color:var(--bb-pink-deep);font-family:var(--font-display)}
+
+/* ---------------------------------------------------------------- 逐日行程 */
+/* 日期锚点条：点一下就滚到那天 */
+.daynav{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 16px}
+.daynav a{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:6px 14px;border-radius:999px;background:var(--surface);
+  border:1.5px solid var(--stroke);font-size:13px;font-weight:700;
+  color:var(--ink-2);text-decoration:none;
+  box-shadow:2px 2px 0 var(--bb-blue-soft);
+  transition:transform .18s var(--ease),box-shadow .18s var(--ease),
+    color .18s var(--ease),border-color .18s var(--ease);
+}
+.daynav a b{font-family:var(--font-num);color:var(--bb-blue-deep);font-weight:800}
+.daynav a:hover,.daynav a:focus-visible{
+  color:var(--bb-pink-deep);border-color:rgba(251,114,153,.5);
+  transform:translate(-1px,-2px);box-shadow:3px 3px 0 var(--bb-pink-soft);
+}
+.daynav a:focus-visible{outline:2px solid var(--bb-blue);outline-offset:2px}
+
+/* 每天一张可折叠的大卡 */
+.day{
+  background:var(--surface);border:1.5px solid var(--stroke);border-radius:18px;
+  padding:0 18px;margin:0 0 14px;
+  box-shadow:3px 3px 0 var(--bb-blue-soft);
+  transition:box-shadow .22s var(--ease),border-color .22s var(--ease);
+}
+.day:hover{border-color:var(--stroke-2)}
+.day[open]{box-shadow:3px 3px 0 var(--bb-pink-soft)}
+.day>summary{
+  display:flex;align-items:center;gap:11px;padding:15px 0;cursor:pointer;
+  list-style:none;font-weight:800;
+}
+.day>summary::-webkit-details-marker{display:none}
+.day>summary::before{
+  content:'';flex:0 0 auto;width:9px;height:9px;border-radius:3px;
+  background:var(--bb-pink);transition:transform .25s var(--ease);
+}
+.day[open]>summary::before{transform:rotate(135deg)}
+.day>summary:focus-visible{outline:2px solid var(--bb-blue);outline-offset:3px;border-radius:8px}
+.day .dnum{
+  flex:0 0 auto;font-family:var(--font-num);font-weight:800;font-size:12.5px;
+  color:#fff;background:var(--bb-pink);padding:2px 11px;border-radius:999px;
+  border:2px solid #fff;box-shadow:2px 2px 0 rgba(0,131,173,.25);
+  transform:rotate(-2deg);letter-spacing:.5px;
+}
+.day .dmeta{flex:1;min-width:0;font-size:15px;color:var(--ink);line-height:1.5}
+.day .dmeta em{font-style:normal;font-family:var(--font-num);font-weight:800;
+  color:var(--bb-blue-deep);margin-right:7px}
+.day .dcnt{
+  flex:0 0 auto;font-size:11.5px;font-weight:800;color:var(--ink-3);
+  background:#f5f2f8;border-radius:999px;padding:2px 10px;white-space:nowrap;
+}
+.day .dbody{padding-bottom:16px}
+.day:nth-of-type(3n+2) .dnum{background:var(--bb-blue)}
+.day:nth-of-type(3n) .dnum{background:var(--bb-lilac)}
+
+/* ---------------------------------------------------------------- 自然专项 */
+/* 每个专项占满一整行：左侧场景动画，右侧要点。不再是大小不一的格子 */
+.nature{display:grid;grid-template-columns:1fr;gap:14px;margin:12px 0}
+.nature .card{
+  margin:0;padding:0;overflow:hidden;border-radius:18px;
+  display:grid;grid-template-columns:216px minmax(0,1fr);
+  align-items:stretch;
+}
+.nature .card:hover{transform:translateY(-3px);box-shadow:4px 4px 0 var(--bb-pink-soft)}
+.nature .scene{
+  position:relative;overflow:hidden;min-height:166px;
+  border-right:1.5px solid var(--stroke);
+}
+/* 扇形缺口放在右侧，像一张被贴纸裁过边的横图 */
+.nature .scene::after{
+  content:'';position:absolute;right:-1px;top:0;bottom:0;width:11px;z-index:3;
+  pointer-events:none;
+  background-image:radial-gradient(circle at 100% 50%,var(--surface) 6.4px,transparent 6.9px);
+  background-size:11px 18px;background-repeat:repeat-y;background-position:right center;
+}
+.nature .scene .label{
+  position:absolute;left:13px;bottom:26px;z-index:4;
+  font-family:var(--font-display);font-weight:900;font-size:16px;
+  color:#fff;letter-spacing:.6px;text-shadow:0 1px 3px rgba(0,0,0,.4);
+}
+.nature .scene .stk{position:absolute;right:20px;bottom:12px;width:30px;height:30px;z-index:4}
+.nature .body{padding:16px 18px 17px;min-width:0;
+  display:flex;flex-direction:column;justify-content:center}
+/* 要点两列排开，把整行的宽度用起来 */
+.nature .dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+  gap:11px 22px;margin:0}
+.nature .kv{border-left:3px solid var(--bb-pink);padding-left:11px;min-width:0}
+/* 地点串这类长值整行通栏，别挤在 auto-fit 的 1/3 列里 */
+.nature .dl .kv.wide{grid-column:1/-1}
+/* 带交互件的卡正文更宽，要点用两列就够；三列会把「注意」这种长值
+   塞进 270px 里挤出四五行，右边还空一列 */
+.nature .card.tall .dl{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.nature .kv:nth-child(4n+2){border-left-color:var(--bb-blue)}
+.nature .kv:nth-child(4n+3){border-left-color:var(--bb-mint)}
+.nature .kv:nth-child(4n){border-left-color:var(--bb-lilac)}
+.nature .kv dt{font-size:11.5px;color:var(--ink-3);font-weight:800;letter-spacing:.4px}
+.nature .kv dd{margin:1px 0 0;font-size:14px;color:var(--ink)}
+@media (max-width:680px){
+  .nature .card{grid-template-columns:1fr}
+  .nature .scene{min-height:112px;border-right:0;
+    border-bottom:1.5px solid var(--stroke)}
+  .nature .scene::after{
+    right:0;left:0;top:auto;bottom:-1px;width:auto;height:11px;
+    background-image:radial-gradient(circle at 50% 100%,var(--surface) 6.4px,transparent 6.9px);
+    background-size:18px 11px;background-repeat:repeat-x;background-position:left bottom;
+  }
+  .nature .scene .label{bottom:14px}
+  .nature .scene .stk{right:14px;bottom:10px}
+}
+
+/* 带图表或长清单的专项卡（星图 / 潮汐点选 / 天光条 / 鸟种卡）：场景动效改成顶部通栏。
+   横着一条 118px 的动效带比在左边拉成 400px 长条好看得多，图表也拿得到全部宽度。 */
+.nature .card.tall{grid-template-columns:1fr}
+.nature .card.tall .scene{
+  min-height:118px;border-right:0;border-bottom:1.5px solid var(--stroke);
+}
+.nature .card.tall .scene::after{
+  right:0;left:0;top:auto;bottom:-1px;width:auto;height:11px;
+  background-image:radial-gradient(circle at 50% 100%,var(--surface) 6.4px,transparent 6.9px);
+  background-size:18px 11px;background-repeat:repeat-x;background-position:left bottom;
+}
+/* 场景从竖条变成横带后，标签落在横带里最深的一段；
+   再加主题色多半是浅绿/浅蓝，白字压上去不够清楚。
+   统一给半透明深色胶囊 —— 浅底、深底、暖底上都能读。
+   下边距也留够，别贴着扇贝边。 */
+.nature .card.tall .scene .label{
+  bottom:13px;left:14px;padding:2px 11px 3px;border-radius:999px;
+  background:rgba(24,26,48,.44);box-shadow:0 1px 4px rgba(0,0,0,.16);
+}
+
+/* 观鸟的芦苇丛原本贴着左边（left:12/25/38px），横带布局下正好被标签压住。
+   整丛往右挪到 22% 处让开标签。用 left 而不是 transform ——
+   .reeds 的 transform 被 sway 动画占着，改它会打断动画。 */
+.nature .card.tall .scene .reeds{left:22%}
+.nature .card.tall .scene .reeds.r2{left:calc(22% + 13px)}
+.nature .card.tall .scene .reeds.r3{left:calc(22% + 26px)}
+.nature .card.tall .scene .stk{right:14px;bottom:12px}
+.nature .card.tall .body{padding:17px 20px 18px;justify-content:flex-start}
+
+/* ---- 观星：夜空 + 错峰闪烁的星 + 漂浮的月 */
+.scene-star{background:linear-gradient(170deg,#1d2246 0%,#333c74 52%,#4d5691 100%)}
+.star{position:absolute;border-radius:50%;background:#fff;
+  box-shadow:0 0 6px 1px rgba(255,255,255,.85);
+  animation:twinkle 3.2s var(--ease) infinite}
+.star.s1{left:14%;top:20%;width:3px;height:3px}
+.star.s2{left:32%;top:42%;width:2px;height:2px;animation-delay:.5s}
+.star.s3{left:48%;top:16%;width:3.5px;height:3.5px;animation-delay:1.1s}
+.star.s4{left:62%;top:50%;width:2px;height:2px;animation-delay:1.7s}
+.star.s5{left:76%;top:26%;width:3px;height:3px;animation-delay:2.2s}
+.star.s6{left:86%;top:58%;width:2px;height:2px;animation-delay:.9s}
+.star.s7{left:22%;top:64%;width:2.5px;height:2.5px;animation-delay:2.6s}
+.star.s8{left:56%;top:72%;width:2px;height:2px;animation-delay:1.4s}
+.moonp{
+  position:absolute;right:22px;top:15px;width:34px;height:34px;border-radius:50%;
+  background:radial-gradient(circle at 34% 32%,#fffdf3 0%,#ffeaf3 58%,#f3c7dd 100%);
+  box-shadow:0 0 20px 7px rgba(255,214,232,.42);
+  animation:moon-drift 11s var(--ease) infinite;
+}
+.star-halo{position:absolute;left:48%;top:16%;width:3.5px;height:3.5px;
+  transform:translate(-50%,-50%)}
+.star-halo::before,.star-halo::after{
+  content:'';position:absolute;left:50%;top:50%;background:rgba(255,255,255,.5);
+  transform:translate(-50%,-50%);
+}
+.star-halo::before{width:26px;height:1px}
+.star-halo::after{width:1px;height:26px}
+
+/* ---- 赶海：番剧蓝三层浪 + 起伏的贝壳 */
+.scene-sea{background:linear-gradient(180deg,#a6e2f5 0%,#4dbde4 46%,#0093c4 100%)}
+.wave{position:absolute;left:-50%;width:200%;height:46px;
+  border-radius:44% 46% 40% 48%;background:rgba(255,255,255,.42);
+  animation:wave-drift 9s linear infinite}
+.wave.w1{top:62px;background:rgba(255,255,255,.3);animation-duration:11s}
+.wave.w2{top:84px;background:rgba(255,255,255,.52);animation-duration:8.5s;
+  animation-direction:reverse}
+.wave.w3{top:106px;background:rgba(255,255,255,.76);animation-duration:13s}
+.seashell{position:absolute;right:26px;top:18px;width:22px;height:15px;
+  background:radial-gradient(circle at 50% 100%,#fff 0%,#ffd9e6 70%);
+  border-radius:50% 50% 12% 12%/70% 70% 30% 30%;
+  box-shadow:0 1px 3px rgba(0,0,0,.16);animation:bob 6s var(--ease) infinite}
+
+/* ---- 观鸟：扇翅掠过 + 摇摆芦苇 */
+.scene-bird{background:linear-gradient(180deg,#ddf5ee 0%,#a8e0d2 50%,#74c9b3 100%)}
+.bird{position:absolute;top:34px;animation:fly-across 15s linear infinite}
+.bird.b2{top:66px;transform:scale(.7);animation-duration:19s;animation-delay:3s}
+.wing{position:absolute;width:15px;height:4px;background:#1f6b58;border-radius:3px;
+  transform-origin:0 50%;animation:flap 1.1s var(--ease) infinite}
+.wing.wl{left:0;top:0}
+.wing.wr{left:0;top:0;animation-name:flap-down}
+.bird-body{position:absolute;left:3px;top:-3px;width:12px;height:6px;
+  border-radius:50%;background:#17554a}
+.reeds{position:absolute;left:12px;bottom:0;width:3px;height:48px;background:#4f9c7e;
+  border-radius:2px;transform-origin:bottom center;
+  animation:sway 5s var(--ease) infinite}
+.reeds.r2{left:25px;height:64px;animation-duration:6.4s}
+.reeds.r3{left:38px;height:38px;animation-duration:4.6s}
+
+/* ---- 日出：粉金天光 + 旋转光芒 + 飘云 */
+.scene-sun{background:linear-gradient(180deg,#ffe9c4 0%,#ffc98f 40%,#fb7299 100%)}
+.sun{position:absolute;left:50%;bottom:-16px;width:56px;height:56px;border-radius:50%;
+  transform:translateX(-50%);
+  background:radial-gradient(circle,#fffdf0 0%,#ffd479 54%,#ff9a4d 100%);
+  box-shadow:0 0 32px 12px rgba(255,206,120,.6);
+  animation:sun-rise 10s var(--ease) infinite}
+.ray{position:absolute;left:50%;bottom:4px;width:130px;height:130px;
+  transform:translateX(-50%);border-radius:50%;opacity:.8;
+  background:conic-gradient(from 0deg,rgba(255,248,220,.5) 0 6deg,transparent 6deg 30deg,
+    rgba(255,248,220,.42) 30deg 36deg,transparent 36deg 60deg);
+  animation:rays-turn 26s linear infinite}
+.cloudbar{position:absolute;width:56px;height:9px;border-radius:9px;
+  background:rgba(255,255,255,.74);animation:cloud-drift 16s linear infinite}
+.cloudbar.c1{top:24px;left:16%;animation-duration:18s}
+.cloudbar.c2{top:52px;left:56%;animation-duration:23s;animation-delay:2s}
+
+/* ---- 朝晚霞：粉橙霞光带通透移 */
+.scene-glow{background:linear-gradient(180deg,#ffdccd 0%,#ffb0a8 36%,#fb7299 72%,#9b6fc0 100%)}
+.glowband{position:absolute;left:-40%;width:180%;height:12px;border-radius:12px;
+  background:linear-gradient(90deg,transparent,rgba(255,250,232,.9),transparent);
+  animation:band-pass 12s var(--ease) infinite}
+.glowband.g1{top:26px}
+.glowband.g2{top:56px;height:8px;animation-duration:15s;animation-delay:2s;opacity:.85}
+.glowband.g3{top:80px;height:15px;animation-duration:18s;animation-delay:4s;opacity:.6}
+
+/* ---------------------------------------------------------------- 动效关键帧 */
+@keyframes twinkle{0%,100%{opacity:.28;transform:scale(.72)}50%{opacity:1;transform:scale(1.2)}}
+@keyframes moon-drift{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes wave-drift{from{transform:translateX(0)}to{transform:translateX(25%)}}
+@keyframes fly-across{from{transform:translateX(-40px)}to{transform:translateX(700px)}}
+@keyframes flap{0%,100%{transform:rotate(-19deg)}50%{transform:rotate(19deg)}}
+@keyframes flap-down{0%,100%{transform:rotate(19deg)}50%{transform:rotate(-19deg)}}
+@keyframes sway{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(5deg)}}
+@keyframes sun-rise{0%,100%{transform:translateX(-50%) translateY(0)}
+  50%{transform:translateX(-50%) translateY(-10px)}}
+@keyframes rays-turn{from{transform:translateX(-50%) rotate(0)}
+  to{transform:translateX(-50%) rotate(360deg)}}
+@keyframes cloud-drift{0%{transform:translateX(0);opacity:.75}50%{opacity:1}
+  100%{transform:translateX(140px);opacity:.75}}
+@keyframes band-pass{0%,100%{transform:translateX(-14%)}50%{transform:translateX(14%)}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+
+/* ---------------------------------------------------------------- 警示与提示 */
+.warn{
+  position:relative;background:#fff7f2;border:1.5px solid #ffdcc8;
+  border-left:5px solid #ff7a45;border-radius:6px 15px 15px 6px;
+  padding:13px 17px;margin:10px 0;box-shadow:3px 3px 0 #ffe9dd;
+}
+.warn b{color:#c2410c;font-family:var(--font-display);font-weight:900;font-size:16px}
+.warn .when{color:#7c5a4a;font-size:13px}
+.sev-blocking{background:#ffe4e6;color:#c7163c}
+.sev-major{background:#fff0dc;color:#a15c1e}
+.sev-minor{background:#f2eff7;color:#5b5468}
+.sev-info{background:#f2f0f4;color:#7a7387}
+.sev-resolved{background:#dcf7ee;color:#12836b}
+.sev-open{background:#ffe4e6;color:#c7163c}
+.sev-accepted_risk{background:#fff6d8;color:#8a6a12}
+
+.note{
+  font-size:13px;color:var(--ink-2);background:#f5fbff;
+  border:1.5px dashed rgba(0,161,214,.4);border-radius:13px;
+  padding:10px 14px;margin:10px 0;
+}
+
+/* ---------------------------------------------------------------- 待办 */
+/* 勾选框是真能点的（纯 HTML input，不用脚本，状态不落盘） */
+.todo{
+  display:flex;gap:11px;align-items:flex-start;cursor:pointer;
+  padding:9px 11px;border-radius:13px;
+  transition:background-color .18s var(--ease);
+}
+.todo:hover{background:var(--bb-pink-mist)}
+.todo input{
+  -webkit-appearance:none;appearance:none;flex:0 0 auto;
+  width:20px;height:20px;margin:3px 0 0;position:relative;cursor:pointer;
+  border:2px solid #c4b7d5;border-radius:7px;background:#fff;
+  transition:background-color .18s var(--ease),border-color .18s var(--ease),
+    transform .18s var(--ease);
+}
+.todo input:hover{border-color:var(--bb-pink);transform:rotate(-6deg)}
+.todo input:checked{background:var(--bb-blue);border-color:var(--bb-blue)}
+.todo input:checked::after{
+  content:'';position:absolute;left:5.5px;top:1.5px;width:5px;height:10.5px;
+  border:2.2px solid #fff;border-top:0;border-left:0;transform:rotate(42deg);
+}
+.todo input:focus-visible{outline:2px solid var(--bb-blue);outline-offset:2px}
+.todo .txt{min-width:0}
+.todo .txt .ti{font-weight:800;color:var(--ink)}
+.todo input:checked ~ .txt .ti{color:var(--ink-3);text-decoration:line-through}
+.todo .nt{color:var(--ink-2);font-size:13px;margin-top:3px}
+
+/* ---------------------------------------------------------------- 表格与预算 */
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:14px;margin:10px 0}
+th,td{text-align:left;padding:8px 10px;vertical-align:top;
+  border-bottom:1px solid var(--stroke)}
+th{
+  color:var(--ink-2);font-weight:800;font-size:12.5px;letter-spacing:.3px;
+  background:#fbf7fd;border-bottom:1.5px solid var(--stroke-2);
+}
+th:first-child{border-radius:10px 0 0 0}
+th:last-child{border-radius:0 10px 0 0}
+td.num,th.num{text-align:right;font-family:var(--font-num);font-weight:700}
+.bar{position:relative;height:8px;background:#f2eef6;border-radius:5px;
+  margin-top:6px;overflow:hidden}
+.bar i{position:absolute;height:100%;border-radius:5px;
+  background:linear-gradient(90deg,var(--bb-pink),var(--bb-lilac) 55%,var(--bb-blue))}
+.total{font-weight:800;color:var(--ink)}
+tfoot td,.total-row td{border-bottom:0}
+/* 依据索引表：前两列窄且不许折行，否则「编号」会被竖着切开。
+   表头只在宽屏保持不折行，窄屏放它折，避免把整页撑出横向滚动。 */
+.facts-tbl th,.facts-tbl td:first-child,.facts-tbl td:nth-child(3),
+.facts-tbl td:nth-child(5){white-space:nowrap}
+.facts-tbl th:first-child,.facts-tbl td:first-child{width:1%}
+@media (max-width:680px){
+  .facts-tbl th{white-space:normal}
+  .facts-tbl{font-size:12.5px}
+  .facts-tbl th,.facts-tbl td{padding:6px 6px}
+}
+
+/* ---------------------------------------------------------------- 折叠与依据 */
+details{
+  background:var(--surface);border:1.5px solid var(--stroke);border-radius:15px;
+  padding:0 16px;margin:12px 0;box-shadow:2px 2px 0 var(--bb-blue-soft);
+}
+details[open]{border-color:rgba(251,114,153,.45);box-shadow:2px 2px 0 var(--bb-pink-soft)}
+summary{
+  cursor:pointer;padding:13px 0;font-weight:800;color:var(--ink);font-size:14.5px;
+  list-style:none;display:flex;align-items:center;gap:9px;
+}
+summary::-webkit-details-marker{display:none}
+summary::before{
+  content:'';flex:0 0 auto;width:8px;height:8px;border-radius:2.5px;background:var(--bb-pink);
+  transition:transform .25s var(--ease);
+}
+details[open]>summary::before{transform:rotate(135deg)}
+summary:focus-visible{outline:2px solid var(--bb-blue);outline-offset:3px;border-radius:7px}
+details .body{padding-bottom:14px}
+.srcs{font-size:12.5px;color:var(--ink-2)}
+.srcs ul{padding-left:18px;margin:6px 0}
+.srcs li{margin:4px 0}
+.srcs code{background:#f5f2f8;border-radius:6px;padding:1px 6px;font-size:12px;
+  font-family:var(--font-num);color:var(--ink-2)}
+.srcs a,.src-link{
+  color:var(--bb-blue-deep);text-decoration:none;word-break:break-all;
+  border-bottom:1px dotted rgba(0,131,173,.55);
+}
+.srcs a:hover,.src-link:hover{color:var(--bb-pink-deep);border-bottom-color:rgba(229,69,122,.6)}
+.srcs a:focus-visible,.src-link:focus-visible{outline:2px solid var(--bb-blue);outline-offset:2px}
+
+footer{
+  margin-top:54px;padding-top:16px;border-top:1.5px dashed var(--stroke-2);
+  color:var(--ink-3);font-size:12.5px;text-align:center;
+}
+.legend{font-size:12.5px;color:var(--ink-3);margin:6px 0 0}
+
+/* 返回顶部 */
+.totop{
+  position:fixed;right:18px;bottom:18px;z-index:30;
+  width:46px;height:46px;border-radius:15px;background:var(--bb-pink);
+  border:2px solid #fff;color:#fff;text-decoration:none;
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+  box-shadow:3px 3px 0 rgba(0,131,173,.25);
+  transition:transform .2s var(--ease),background-color .2s var(--ease);
+}
+.totop:hover{background:var(--bb-blue);transform:translateY(-3px) rotate(-4deg)}
+.totop:focus-visible{outline:2px solid var(--bb-blue);outline-offset:3px}
+
+/* 锚点跳过来的那一节，用粉底标出落点 */
+section:target>.card,section:target>.grid .cell,section:target>.day{
+  border-color:rgba(251,114,153,.6);box-shadow:4px 4px 0 var(--bb-pink-soft);
+}
+section:target>.nature .card{border-color:rgba(251,114,153,.5)}
+details[id]:target{border-color:rgba(251,114,153,.65);box-shadow:3px 3px 0 var(--bb-pink-soft)}
+
+/* ==========================================================================
+   自然专项 · 交互件（v4.3.0 新增）
+   1) 鸟种卡：<details> 展开看学名/科属/保护等级/简介，并给出图鉴与查图外链
+   2) 星图：SVG 极坐标星图（地平坐标是算出来的）+ 月亮相位盘
+   3) 天光条：蓝调/黄金/日出日落一条横轴看全 + 霞光（火烧云）指数
+   4) 潮汐图：点曲线上的圆点切换该时刻的潮位与下滩建议
+   交互全用原生 details / radio + 兄弟选择器，页面里没有一行脚本。
+   ========================================================================== */
+
+/* ---------------------------------------------------------------- 鸟种卡 */
+.splist{display:grid;gap:8px;margin:12px 0 2px}
+.sp{margin:0;padding:0 13px;border-radius:14px;box-shadow:2px 2px 0 var(--bb-blue-soft)}
+.sp.sp-plain{
+  display:flex;align-items:center;gap:9px;padding:8px 13px;background:var(--surface);
+  border:1.5px solid var(--stroke);box-shadow:2px 2px 0 var(--bb-blue-soft);
+}
+/* 降级胶囊的说明位：纯字符串写成一句话时，鸟名留在名字位，
+   剩下的话进这枚小灰字，单行省略，完整文本在 title 里 */
+.sp-plain .sp-name{flex:0 0 auto}
+.sp-note{
+  flex:1 1 auto;min-width:0;font-size:12px;color:var(--ink-3);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.sp>summary{display:flex;align-items:center;gap:9px;padding:11px 0;font-size:15px}
+.sp>summary::before{display:none}
+.sp .sp-ico{flex:0 0 auto;width:30px;height:30px;display:grid;place-items:center;color:var(--bb-blue)}
+.sp .sp-ico svg{display:block;width:100%;height:100%}
+.sp-c1 .sp-ico{color:var(--bb-pink)}
+.sp-c2 .sp-ico{color:var(--bb-blue)}
+.sp-c3 .sp-ico{color:#12836b}
+.sp-c4 .sp-ico{color:#7a56cf}
+.sp-c5 .sp-ico{color:#c07d00}
+.sp-c6 .sp-ico{color:#d95f36}
+.sp .sp-name{font-weight:800;color:var(--ink)}
+.sp .sp-sci{font-family:var(--font-num);font-style:italic;font-size:12px;color:var(--ink-3);
+  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sp-badge{
+  flex:0 0 auto;font-size:11px;font-weight:800;padding:1px 9px;border-radius:999px;
+  color:#b06a00;background:var(--bb-gold-soft);border:1px solid currentColor;white-space:nowrap;
+}
+.sp-badge-none{color:var(--ink-3);background:#f4f2f7}
+.sp-more{
+  margin-left:auto;flex:0 0 auto;font-size:11.5px;font-weight:800;white-space:nowrap;
+  color:var(--bb-pink-deep);background:var(--bb-pink-soft);border-radius:999px;padding:2px 10px;
+  transition:background-color .18s var(--ease),color .18s var(--ease);
+}
+.sp-more::after{content:' ▾';font-size:10px}
+.sp[open] .sp-more{background:var(--bb-blue);color:#fff}
+.sp[open] .sp-more::after{content:' ▴'}
+.sp-body{padding:2px 0 14px;border-top:1px dashed var(--stroke)}
+.sp-links{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0 4px}
+.sp-link{
+  display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:800;
+  color:var(--bb-blue-deep);text-decoration:none;background:var(--bb-blue-soft);
+  border:1px solid rgba(0,161,214,.35);border-radius:999px;padding:3px 11px;
+  transition:transform .18s var(--ease),background-color .18s var(--ease),color .18s var(--ease);
+}
+.sp-link::after{content:'↗';font-size:9.5px;opacity:.8}
+.sp-link:hover,.sp-link:focus-visible{
+  background:var(--bb-pink-soft);color:var(--bb-pink-deep);
+  border-color:rgba(251,114,153,.5);transform:translateY(-2px);
+}
+.sp-link:focus-visible{outline:2px solid var(--bb-blue);outline-offset:2px}
+.sp-metas{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+  gap:8px 18px;margin:10px 0 0}
+.sp-m dt{font-size:11.5px;font-weight:800;color:var(--ink-3);letter-spacing:.3px}
+.sp-m dd{margin:1px 0 0;font-size:13.5px;color:var(--ink)}
+.sp-intro{margin:10px 0 0;font-size:13.5px;color:var(--ink-2)}
+.sp-src{margin:6px 0 0;font-size:12px;color:var(--ink-3);line-height:1.62}
+.pl{display:inline-flex;flex-wrap:wrap;gap:2px 10px}
+/* 地点串：flex 让「地点 + 备注」成为一个整体换行单元；
+   分隔符「、」由 CSS 画在后一项前面 —— 写成文本节点的话，
+   一行排不下时「、」会孤零零落在行尾（原先把「成山头」那行啃出个尾巴）。
+   flex:0 1 auto 而不是 0 0 auto：单个地名本身就超宽时还允许内部折行，别溢出。 */
+.pl{display:flex;flex-wrap:wrap;align-items:baseline}
+.pl-item{display:inline-flex;align-items:baseline;gap:5px;
+  flex:0 1 auto;max-width:100%}
+.pl-item+.pl-item::before{content:"、";color:var(--ink-3);margin:0 1.5px}
+.pl-note{font-size:11.5px;color:var(--ink-3)}
+
+/* ---------------------------------------------------------------- 星图 */
+/* 星图行：两列均衡。原来右列写死 140px，星图居中在 1fr 里，
+   1330px 宽的正文两边各空一大片，看着像没排完。 */
+.skyrow{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;
+  align-items:start;margin:10px 0 2px}
+.skycol{display:flex;flex-direction:column;gap:11px;min-width:0}
+.skycol .tgs{margin:0}
+.skywrap{margin:0 auto;max-width:480px}
+.skychart{display:block;width:100%;height:auto;border-radius:16px}
+.skychart .sky-bg{fill:#151a38}
+.skychart .sky-ring{fill:none;stroke:rgba(255,255,255,.5);stroke-width:1.5}
+.skychart .skygrid{fill:none;stroke:rgba(255,255,255,.16);stroke-width:1}
+.skychart .cst{fill:none;stroke:rgba(255,255,255,.34);stroke-width:1.2;stroke-linejoin:round}
+.skychart .cstlbl{
+  fill:var(--bb-lemon);font-size:12px;font-weight:800;text-anchor:middle;
+  font-family:var(--font-display);opacity:.95;
+  /* 深色描边当晕，压在星点上也不会糊 */
+  paint-order:stroke;stroke:rgba(18,22,48,.9);stroke-width:3px;
+  stroke-linejoin:round;
+}
+.skychart .st{fill:#fff}
+.skychart .stlbl{
+  fill:rgba(255,255,255,.9);font-size:11px;font-weight:700;
+  paint-order:stroke;stroke:rgba(18,22,48,.75);stroke-width:2.6px;stroke-linejoin:round;
+}
+.skychart .cardi{fill:#ffb0c8;font-size:13px;font-weight:900;font-family:var(--font-display)}
+.skymoon{
+  margin:0;width:100%;text-align:center;color:#fff;border-radius:16px;
+  padding:18px 12px 16px;
+  background:linear-gradient(170deg,#1d2246 0%,#3a4382 100%);
+}
+.moondisc{width:68px;height:68px;filter:drop-shadow(0 0 11px rgba(255,214,232,.55))}
+.moon-dark{fill:#2c3468}
+.moon-lit{fill:#fffdf3}
+.moon-edge{fill:none;stroke:rgba(255,255,255,.45);stroke-width:1}
+.skymoon figcaption{font-size:11.5px;margin-top:10px;color:rgba(255,255,255,.9);line-height:1.6}
+.skymoon figcaption b{font-family:var(--font-num);font-size:16px}
+.skycap{font-size:11.5px;color:var(--ink-3);margin:7px 0 0;line-height:1.62}
+.tgs{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:11px 0 0}
+.tgs-t{font-size:11.5px;font-weight:800;color:var(--ink-3);letter-spacing:.4px}
+.tg{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;
+  background:var(--bb-lilac-soft);border:1px solid rgba(180,140,242,.42);
+  border-radius:999px;padding:3px 12px}
+.tg b{color:var(--ink);font-weight:800}
+.tg em{font-style:normal;font-size:11px;color:#7a56cf;background:#fff;border-radius:999px;
+  padding:0 7px;white-space:nowrap}
+.tg-nt{color:var(--ink-2);font-size:12px}
+
+/* ---------------------------------------------------------------- 天光条 */
+.sunband{margin:10px 0 4px}
+.sunband-svg{display:block;width:100%;height:auto;border-radius:14px;background:#fbf7fd}
+.sunband-svg .b-blue{fill:rgba(78,104,196,.42)}
+.sunband-svg .b-gold{fill:rgba(255,196,74,.5)}
+.sunband-svg .bandlbl{fill:#3f3a52;font-size:11px;font-weight:800}
+.sunband-svg .t-rise{stroke:var(--bb-pink-deep);stroke-width:2;stroke-dasharray:4 3}
+.sunband-svg .t-set{stroke:#5b4a94;stroke-width:2;stroke-dasharray:4 3}
+.sunband-svg .ticklbl{fill:var(--ink);font-size:11.5px;font-weight:800}
+.sunband-svg .axlbl{fill:var(--ink-3);font-size:10.5px;font-family:var(--font-num)}
+/* 条上太窄放不下字的时段（蓝调只有二十几分钟），下面给一排色块图例对位置 */
+.sblegend{display:flex;flex-wrap:wrap;gap:14px;margin:7px 2px 0}
+.sb{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--ink-2)}
+.sb::before{content:'';width:16px;height:10px;border-radius:3px;border:1px solid rgba(0,0,0,.12)}
+.sb-blue::before{background:rgba(78,104,196,.55)}
+.sb-gold::before{background:rgba(255,196,74,.7)}
+.sb-day::before{background:#cfeaf7}
+.sb-night::before{background:#2b3a67}
+
+/* ---------------------------------------------------------------- 霞光指数 */
+.glow{margin:12px 0 0;background:var(--bb-gold-soft);border:1.5px solid #ffe0a8;
+  border-radius:14px;padding:11px 14px;box-shadow:2px 2px 0 #fff1d2}
+.glow-head{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.glow-head b{font-family:var(--font-display);font-weight:900;font-size:14.5px;color:#8a5a00}
+.glow-lv{font-size:12px;font-weight:800;color:#fff;background:var(--bb-gold);
+  border-radius:999px;padding:1px 11px;border:1.5px solid #fff}
+.glow-dots{display:inline-flex;gap:5px}
+.glow-dots i{width:11px;height:11px;border-radius:50%;background:#fff;
+  border:1.5px solid #e0a400}
+.glow-dots i.on{background:var(--bb-pink);border-color:#fff;
+  box-shadow:0 0 0 1.5px rgba(251,114,153,.35)}
+.glow-num{font-family:var(--font-num);font-weight:800;font-size:13px;color:#8a5a00}
+.glow-why{margin:8px 0 0;padding-left:17px;font-size:12.5px;color:#6b5636}
+.glow-why li{margin:2px 0}
+.glow-data{display:flex;flex-wrap:wrap;gap:6px;margin:9px 0 0}
+.gd{font-size:11.5px;color:var(--ink-2);background:#fff;border-radius:8px;padding:2px 8px;
+  border:1px solid rgba(224,164,0,.35)}
+.gd b{color:#8a5a00;font-weight:800;margin-right:5px}
+.glow-note{margin:9px 0 0;font-size:11.5px;color:#8a7250}
+.glow-p{margin:6px 0 0;font-size:13px;color:var(--ink-2)}
+
+/* ---------------------------------------------------------------- 潮汐点选图 */
+.tide{position:relative;margin:12px 0 0}
+/* 单选框本体藏起来但留在焦点序里，键盘也能点 */
+.tide>.tp{
+  position:absolute;width:1px;height:1px;margin:0;opacity:0;pointer-events:none;
+  -webkit-appearance:none;appearance:none;
+}
+.tide-plot{position:relative}
+.tide-svg{display:block;width:100%;height:auto}
+.tide-svg .tarea{fill:rgba(0,161,214,.14)}
+.tide-svg .tline{fill:none;stroke:var(--bb-blue);stroke-width:2.4;
+  stroke-linejoin:round;stroke-linecap:round}
+.tide-svg .tgrid{stroke:rgba(0,161,214,.22);stroke-width:1;stroke-dasharray:3 4}
+.tide-svg .taxlbl{fill:var(--ink-3);font-size:11px;font-family:var(--font-num)}
+.tide-svg .twindow{fill:rgba(251,114,153,.16);stroke:rgba(251,114,153,.5);
+  stroke-width:1.2;stroke-dasharray:5 4}
+.tide-svg .twlbl{fill:var(--bb-pink-deep);font-size:11.5px;font-weight:800}
+.tp-marks{position:absolute;inset:0}
+.tpdot{
+  position:absolute;width:28px;height:28px;border-radius:50%;cursor:pointer;
+  transform:translate(-50%,-50%);display:grid;place-items:center;
+}
+.tpdot i{
+  width:11px;height:11px;border-radius:50%;background:#fff;border:2px solid var(--bb-blue);
+  box-shadow:0 1px 3px rgba(0,0,0,.2);
+  transition:transform .18s var(--ease),background-color .18s var(--ease),
+    border-color .18s var(--ease);
+}
+.tpdot:hover i{transform:scale(1.45);border-color:var(--bb-pink)}
+/* 点哪个亮哪个：第 k 个单选 <-> .tp-marks 里第 k 个圆点 <-> .tp-panels 里第 k 块面板。
+   一条逗号选择器覆盖 32 个点，纯 CSS，无脚本。 */
+.tp:nth-of-type(1):checked ~ .tide-plot .tpdot:nth-child(1) i, .tp:nth-of-type(2):checked ~ .tide-plot .tpdot:nth-child(2) i, .tp:nth-of-type(3):checked ~ .tide-plot .tpdot:nth-child(3) i, .tp:nth-of-type(4):checked ~ .tide-plot .tpdot:nth-child(4) i, .tp:nth-of-type(5):checked ~ .tide-plot .tpdot:nth-child(5) i, .tp:nth-of-type(6):checked ~ .tide-plot .tpdot:nth-child(6) i, .tp:nth-of-type(7):checked ~ .tide-plot .tpdot:nth-child(7) i, .tp:nth-of-type(8):checked ~ .tide-plot .tpdot:nth-child(8) i, .tp:nth-of-type(9):checked ~ .tide-plot .tpdot:nth-child(9) i, .tp:nth-of-type(10):checked ~ .tide-plot .tpdot:nth-child(10) i, .tp:nth-of-type(11):checked ~ .tide-plot .tpdot:nth-child(11) i, .tp:nth-of-type(12):checked ~ .tide-plot .tpdot:nth-child(12) i, .tp:nth-of-type(13):checked ~ .tide-plot .tpdot:nth-child(13) i, .tp:nth-of-type(14):checked ~ .tide-plot .tpdot:nth-child(14) i, .tp:nth-of-type(15):checked ~ .tide-plot .tpdot:nth-child(15) i, .tp:nth-of-type(16):checked ~ .tide-plot .tpdot:nth-child(16) i, .tp:nth-of-type(17):checked ~ .tide-plot .tpdot:nth-child(17) i, .tp:nth-of-type(18):checked ~ .tide-plot .tpdot:nth-child(18) i, .tp:nth-of-type(19):checked ~ .tide-plot .tpdot:nth-child(19) i, .tp:nth-of-type(20):checked ~ .tide-plot .tpdot:nth-child(20) i, .tp:nth-of-type(21):checked ~ .tide-plot .tpdot:nth-child(21) i, .tp:nth-of-type(22):checked ~ .tide-plot .tpdot:nth-child(22) i, .tp:nth-of-type(23):checked ~ .tide-plot .tpdot:nth-child(23) i, .tp:nth-of-type(24):checked ~ .tide-plot .tpdot:nth-child(24) i, .tp:nth-of-type(25):checked ~ .tide-plot .tpdot:nth-child(25) i, .tp:nth-of-type(26):checked ~ .tide-plot .tpdot:nth-child(26) i, .tp:nth-of-type(27):checked ~ .tide-plot .tpdot:nth-child(27) i, .tp:nth-of-type(28):checked ~ .tide-plot .tpdot:nth-child(28) i, .tp:nth-of-type(29):checked ~ .tide-plot .tpdot:nth-child(29) i, .tp:nth-of-type(30):checked ~ .tide-plot .tpdot:nth-child(30) i, .tp:nth-of-type(31):checked ~ .tide-plot .tpdot:nth-child(31) i, .tp:nth-of-type(32):checked ~ .tide-plot .tpdot:nth-child(32) i{
+  background:var(--bb-pink);border-color:#fff;transform:scale(1.55);
+  box-shadow:0 0 0 3px rgba(251,114,153,.35);animation:tp-pulse 2.1s var(--ease) infinite;
+}
+.tp:nth-of-type(1):focus-visible ~ .tide-plot .tpdot:nth-child(1), .tp:nth-of-type(2):focus-visible ~ .tide-plot .tpdot:nth-child(2), .tp:nth-of-type(3):focus-visible ~ .tide-plot .tpdot:nth-child(3), .tp:nth-of-type(4):focus-visible ~ .tide-plot .tpdot:nth-child(4), .tp:nth-of-type(5):focus-visible ~ .tide-plot .tpdot:nth-child(5), .tp:nth-of-type(6):focus-visible ~ .tide-plot .tpdot:nth-child(6), .tp:nth-of-type(7):focus-visible ~ .tide-plot .tpdot:nth-child(7), .tp:nth-of-type(8):focus-visible ~ .tide-plot .tpdot:nth-child(8), .tp:nth-of-type(9):focus-visible ~ .tide-plot .tpdot:nth-child(9), .tp:nth-of-type(10):focus-visible ~ .tide-plot .tpdot:nth-child(10), .tp:nth-of-type(11):focus-visible ~ .tide-plot .tpdot:nth-child(11), .tp:nth-of-type(12):focus-visible ~ .tide-plot .tpdot:nth-child(12), .tp:nth-of-type(13):focus-visible ~ .tide-plot .tpdot:nth-child(13), .tp:nth-of-type(14):focus-visible ~ .tide-plot .tpdot:nth-child(14), .tp:nth-of-type(15):focus-visible ~ .tide-plot .tpdot:nth-child(15), .tp:nth-of-type(16):focus-visible ~ .tide-plot .tpdot:nth-child(16), .tp:nth-of-type(17):focus-visible ~ .tide-plot .tpdot:nth-child(17), .tp:nth-of-type(18):focus-visible ~ .tide-plot .tpdot:nth-child(18), .tp:nth-of-type(19):focus-visible ~ .tide-plot .tpdot:nth-child(19), .tp:nth-of-type(20):focus-visible ~ .tide-plot .tpdot:nth-child(20), .tp:nth-of-type(21):focus-visible ~ .tide-plot .tpdot:nth-child(21), .tp:nth-of-type(22):focus-visible ~ .tide-plot .tpdot:nth-child(22), .tp:nth-of-type(23):focus-visible ~ .tide-plot .tpdot:nth-child(23), .tp:nth-of-type(24):focus-visible ~ .tide-plot .tpdot:nth-child(24), .tp:nth-of-type(25):focus-visible ~ .tide-plot .tpdot:nth-child(25), .tp:nth-of-type(26):focus-visible ~ .tide-plot .tpdot:nth-child(26), .tp:nth-of-type(27):focus-visible ~ .tide-plot .tpdot:nth-child(27), .tp:nth-of-type(28):focus-visible ~ .tide-plot .tpdot:nth-child(28), .tp:nth-of-type(29):focus-visible ~ .tide-plot .tpdot:nth-child(29), .tp:nth-of-type(30):focus-visible ~ .tide-plot .tpdot:nth-child(30), .tp:nth-of-type(31):focus-visible ~ .tide-plot .tpdot:nth-child(31), .tp:nth-of-type(32):focus-visible ~ .tide-plot .tpdot:nth-child(32){outline:2px solid var(--bb-blue);outline-offset:1px;border-radius:50%}
+.tp-panels{margin:10px 0 0}
+.tp-panels>.tp-panel{display:none}
+.tp:nth-of-type(1):checked ~ .tp-panels > .tp-panel:nth-child(1), .tp:nth-of-type(2):checked ~ .tp-panels > .tp-panel:nth-child(2), .tp:nth-of-type(3):checked ~ .tp-panels > .tp-panel:nth-child(3), .tp:nth-of-type(4):checked ~ .tp-panels > .tp-panel:nth-child(4), .tp:nth-of-type(5):checked ~ .tp-panels > .tp-panel:nth-child(5), .tp:nth-of-type(6):checked ~ .tp-panels > .tp-panel:nth-child(6), .tp:nth-of-type(7):checked ~ .tp-panels > .tp-panel:nth-child(7), .tp:nth-of-type(8):checked ~ .tp-panels > .tp-panel:nth-child(8), .tp:nth-of-type(9):checked ~ .tp-panels > .tp-panel:nth-child(9), .tp:nth-of-type(10):checked ~ .tp-panels > .tp-panel:nth-child(10), .tp:nth-of-type(11):checked ~ .tp-panels > .tp-panel:nth-child(11), .tp:nth-of-type(12):checked ~ .tp-panels > .tp-panel:nth-child(12), .tp:nth-of-type(13):checked ~ .tp-panels > .tp-panel:nth-child(13), .tp:nth-of-type(14):checked ~ .tp-panels > .tp-panel:nth-child(14), .tp:nth-of-type(15):checked ~ .tp-panels > .tp-panel:nth-child(15), .tp:nth-of-type(16):checked ~ .tp-panels > .tp-panel:nth-child(16), .tp:nth-of-type(17):checked ~ .tp-panels > .tp-panel:nth-child(17), .tp:nth-of-type(18):checked ~ .tp-panels > .tp-panel:nth-child(18), .tp:nth-of-type(19):checked ~ .tp-panels > .tp-panel:nth-child(19), .tp:nth-of-type(20):checked ~ .tp-panels > .tp-panel:nth-child(20), .tp:nth-of-type(21):checked ~ .tp-panels > .tp-panel:nth-child(21), .tp:nth-of-type(22):checked ~ .tp-panels > .tp-panel:nth-child(22), .tp:nth-of-type(23):checked ~ .tp-panels > .tp-panel:nth-child(23), .tp:nth-of-type(24):checked ~ .tp-panels > .tp-panel:nth-child(24), .tp:nth-of-type(25):checked ~ .tp-panels > .tp-panel:nth-child(25), .tp:nth-of-type(26):checked ~ .tp-panels > .tp-panel:nth-child(26), .tp:nth-of-type(27):checked ~ .tp-panels > .tp-panel:nth-child(27), .tp:nth-of-type(28):checked ~ .tp-panels > .tp-panel:nth-child(28), .tp:nth-of-type(29):checked ~ .tp-panels > .tp-panel:nth-child(29), .tp:nth-of-type(30):checked ~ .tp-panels > .tp-panel:nth-child(30), .tp:nth-of-type(31):checked ~ .tp-panels > .tp-panel:nth-child(31), .tp:nth-of-type(32):checked ~ .tp-panels > .tp-panel:nth-child(32){
+  display:block;background:var(--bb-pink-mist);border:1.5px solid rgba(251,114,153,.35);
+  border-radius:13px;padding:10px 14px;box-shadow:2px 2px 0 var(--bb-pink-soft);
+}
+.tp-panel .tp-t{font-family:var(--font-num);font-weight:800;font-size:15px;color:var(--bb-blue-deep)}
+.tp-panel .tp-h{font-family:var(--font-num);font-weight:800;font-size:17px;color:var(--ink);
+  margin:0 9px}
+.tp-panel .tp-kind{font-style:normal;font-size:11px;font-weight:800;color:#fff;
+  background:var(--bb-mint);border-radius:999px;padding:1px 9px}
+.tp-panel .tp-tr{font-size:11.5px;font-weight:800;color:var(--ink-3);margin-left:8px}
+.tp-panel p{margin:6px 0 0;font-size:13px;color:var(--ink-2)}
+.tide-hint{margin:9px 0 0;font-size:12px;color:var(--ink-3)}
+@keyframes tp-pulse{
+  0%,100%{box-shadow:0 0 0 2px rgba(251,114,153,.45)}
+  50%{box-shadow:0 0 0 6px rgba(251,114,153,.12)}
+}
+
+/* 窄屏：星图与月亮上下排 */
+@media (max-width:680px){
+  .skyrow{grid-template-columns:1fr}
+  .skymoon{text-align:left;padding:12px 14px}
+  .skymoon .moondisc{margin-right:10px;vertical-align:middle}
+  .skymoon figcaption{display:inline-block;vertical-align:middle;margin-top:0}
+  .sp>summary{flex-wrap:wrap;row-gap:4px}
+  .sp .sp-sci{order:3;flex:1 1 100%;white-space:normal}
+}
+
+/* ---------------------------------------------------------------- 尊重系统设置 */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none !important;transition:none !important}
+  html{scroll-behavior:auto}
+  .bling i{opacity:.5}
+}
+
+/* ---------------------------------------------------------------- 打印 */
+/* 速览网格里的长句（主题/硬约束）整行通栏 */
+.grid .cell.wide{grid-column:1/-1}
+/* 速览专用：定死列数。原来的 .grid 是 auto-fit 自动列数，
+   "占两列"在不同宽度下含义不同，压成两列就会歪。
+   4 列 / 2 列 / 1 列三档，格子按 span 拼，行行填满不留空格。 */
+.grid.g-glance{grid-template-columns:repeat(4,minmax(0,1fr))}
+.grid.g-glance .cell.half{grid-column:span 2}
+@media (max-width:820px){
+  .grid.g-glance{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:480px){
+  .grid.g-glance{grid-template-columns:1fr}
+}
+
+
+
+
+
+@media print{
+  body{background:#fff;background-image:none;font-size:12.5px;color:#000}
+  body::before,body::after{display:none}
+  .wrap{max-width:none;padding:0;position:static}
+  .toc,.totop,.danmaku,.bling,.stk,.cover i.spark,.daynav{display:none !important}
+  .cover{background:#fff !important;color:#000;padding:0 0 14px;margin:0 0 16px;
+    border-bottom:3px solid #fb7299}
+  .cover::after{display:none}
+  .cover h1,.badge{color:#000;text-shadow:none}
+  .cover .sub{color:#444}
+  .cover .facts span{border-color:#ccc;box-shadow:none;background:#fff}
+  .badge{border-color:#999;box-shadow:none;transform:none}
+  .card,.grid .cell,details,.warn,.day{box-shadow:none;border-color:#ccc;break-inside:avoid}
+  .card:hover,.grid .cell:hover,.nature .card:hover,.slot:hover{transform:none;box-shadow:none;
+    background:transparent}
+  h2 .ico{background:#666 !important;box-shadow:none;transform:none}
+  h2{break-after:avoid}
+  details,.day{border-style:solid;padding:0 14px}
+  details .body,.day .dbody{display:block !important}
+  .day>summary{padding:8px 0}
+  .scene{height:44px;min-height:0;filter:grayscale(.35)}
+  /* 必须同时清掉 min-height —— 通栏卡的 .scene 写了 min-height:118px，
+     优先级和这条一样，光设 height 会被 min-height 顶回去，横带还是 118px */
+  .nature .card.tall .scene{height:38px;min-height:0}
+  /* 打印时横带只有 38px 高。场景底色从浅薄荷到深藏蓝都有，
+     白字在某些底色上读不清、黑字在另一些上读不清 —— 统一做成白底描边的印刷小签 */
+  .nature .card.tall .scene .label,
+  .nature .scene .label{bottom:3px;left:7px;font-size:11.5px;
+    padding:1px 7px;border-radius:999px;background:#fff;color:#111;
+    border:.8px solid #bbb;box-shadow:none;text-shadow:none}
+  /* 打印时横带只有 38px 高，48~64px 的芦苇会被切掉一半，干脆不画 */
+  .nature .card.tall .scene .reeds,
+  .nature .card.tall .scene .reeds.r2,
+  .nature .card.tall .scene .reeds.r3{display:none}
+  .nature .card{grid-template-columns:150px minmax(0,1fr)}
+  .nature .scene::after{display:none}
+  /* 交互件上纸：鸟种卡全展开（纸质上要能查），星图反白省墨，点选圆点保留位置感 */
+  .sp{box-shadow:none;border-color:#ccc;padding:0 12px;break-inside:avoid}
+  .sp.sp-plain{box-shadow:none;border-color:#ccc}
+  .sp>summary{padding:7px 0}
+  /* 鸟种卡在纸上全展开（纸质上要能查）。
+     Chromium 131+ 用 ::details-content 的 content-visibility 控制折叠内容的可见性，
+     只覆盖 .sp-body 的 display 已经不够了，两条都写上，老引擎认哪条算哪条。 */
+  .sp::details-content{content-visibility:visible !important;block-size:auto !important}
+  .sp-body{display:block !important;border-top:0}
+  .sp-more{display:none}
+  .sp-badge{border-color:#999}
+  .sp-link,.sp-link::after{color:#333}
+  .skychart{max-width:330px}
+  .skychart .sky-bg{fill:#fff}
+  .skychart .sky-ring{stroke:#333}
+  .skychart .skygrid{stroke:#ccc}
+  .skychart .cst{stroke:#aaa}
+  .skychart .st{fill:#111}
+  .skychart .stlbl{fill:#111}
+  .skychart .cstlbl{fill:#555}
+  .skychart .cstlbl,.skychart .stlbl{stroke:none}
+  .skychart .cardi{fill:#333}
+  .skymoon{background:#f4f2f7;color:#000;break-inside:avoid}
+  .skymoon figcaption{color:#333}
+  .moon-dark{fill:#d8d4e2}
+  .moon-edge{stroke:#999}
+  .sunband-svg,.tide-svg{max-width:520px}
+  .sunband-svg{background:#fff}
+  .glow{box-shadow:none;break-inside:avoid}
+  .tpdot i{box-shadow:none}
+  .tp-panels>.tp-panel{box-shadow:none}
+  *{animation:none !important}
+  a{color:inherit;text-decoration:none}
+}
+
+</style>
+</head>
+<body id="top"><header class="cover"><i class="spark"></i><i class="spark"></i><i class="spark"></i><i class="spark"></i><i class="spark"></i><i class="stk stk-s1" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 25a12 12 0 0 1 24 0z" fill="#ffd9e6" stroke="#e5457a"/><path d="M16 13v12M10 15l2.6 10M22 15l-2.6 10" stroke="#e5457a"/></svg></i><i class="stk stk-s2" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19c4-7 10-11 18-11 0 9-6 15-14 15H4z" fill="#bfe9dc" stroke="#12836b"/><path d="M10 19c3-2 6-2 9 0" stroke="#12836b"/><circle cx="24.5" cy="12" r="1.7" fill="#12836b"/><path d="M26.5 12.6l4 1.4-4 1.4z" fill="#ffb01a" stroke="#ffb01a"/></svg></i><i class="stk stk-s3" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 16 4.5 9.6v12.8zM17 16l10.5-6.4v12.8z" fill="#ffd1e3" stroke="#e5457a"/><circle cx="16" cy="16" r="3.2" fill="#fff" stroke="#e5457a"/></svg></i><h1>威海 2 日 · 赶海 + 观鸟 + 日出<span class="badge" style="background:#d6226b">有条件可用</span></h1><div class="sub">v3 · 生成于 2026-09-23 13:39 · 时间价格预约以官方为准</div><div class="facts"><span>2026-10-01 → 2026-10-02</span><span>2 天</span><span>2 成人</span><span>从北京出发</span><span>观鸟</span><span>观星</span><span>日出</span><span>赶海</span><span>朝晚霞</span></div><div class="note">成山头门票与返程高铁票尚未落实，落实后状态可升级为已核查可用。</div><div class="danmaku" aria-hidden="true"><i>北京 → 威海</i><i>2 天</i><i>日出 05:45</i><i>10/1 干潮 06:08</i><i>月相 10/1 约亏凸月 75%</i></div></header><div class="wrap"><nav class="toc" aria-label="章节导航"><a href="#sec-glance">速览</a><a href="#sec-weather">天气</a><a href="#sec-nature">自然专项</a><a href="#sec-days">行程</a><a href="#sec-food">美食</a><a href="#sec-budget">预算</a><a href="#sec-todo">待办</a><a href="#sec-pitfalls">踩坑</a><a href="#sec-sources">依据</a></nav><section id="sec-glance" class="sec"><h2><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3 6.5 13H11l-1 8 7.5-10.5H12z"/></svg></span>一页速览<i class="stk" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 27S4 19.6 4 12.6A6.5 6.5 0 0 1 16 8.8 6.5 6.5 0 0 1 28 12.6C28 19.6 16 27 16 27z" fill="#ffd1e3" stroke="#e5457a"/></svg></i></h2><div class="grid g-glance"><div class="cell wide"><b>这趟的主题</b><span>两人好不容易请下来的两天，重点就是海边的日出、赶海和观鸟，吃两顿海鲜；景点数量不重要。</span></div><div class="cell"><b>往返</b><span>北京 → 威海</span></div><div class="cell"><b>同行</b><span>2 成人</span></div><div class="cell"><b>预算</b><span>2500 CNY（总额）</span></div><div class="cell"><b>节奏</b><span>轻松休闲（D1 例外早起）</span></div><div class="cell half"><b>专项偏好</b><span>必须玩到：赶海、观鸟　·　能做则做：观星、日出</span></div><div class="cell half"><b>硬约束</b><span>不吃辣，海鲜以清蒸白灼为主；回程必须 D2 晚上到北京，不能顺延到 D3；不进入保护区核心区，只走开放观鸟点</span></div></div></section><section id="sec-weather" class="sec"><h2><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18h9.5a4 4 0 0 0 .6-7.96A6 6 0 0 0 5.6 11.6 3.2 3.2 0 0 0 7 18z"/></svg></span>天气研判<i class="stk" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 24h13a5.5 5.5 0 0 0 .8-10.9A7.5 7.5 0 0 0 8 14.2 4.2 4.2 0 0 0 9 24z" fill="#e3f6fd" stroke="#00a1d6"/></svg></i></h2><div class="grid"><div class="cell"><b>2026-10-01</b><span>☀️ 16-22℃ 东北风 3 级</span><b style="display:block;font-size:12px;color:var(--ink-3)">s5</b></div><div class="cell"><b>2026-10-02</b><span>🌤 15-21℃ 东北风 3-4 级</span><b style="display:block;font-size:12px;color:var(--ink-3)">s5</b></div></div></section><section id="sec-nature" class="sec"><h2><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20c0-8 6-14 16-14 0 10-6 14-16 14z"/><path d="M8.5 15.5c2-2.6 4.6-4.4 8-5.4"/></svg></span>自然观察专项<i class="stk" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 27C5 15 13 7 27 7c0 12-8 20-20 20z" fill="#bfe9dc" stroke="#12836b"/><path d="M10 22c3-4 7-7 12-9" stroke="#12836b"/></svg></i></h2><div class="nature"><div class="card tall"><div class="scene scene-bird"><span class="reeds"></span><span class="reeds r2"></span><span class="reeds r3"></span><span class="bird"><span class="wing wl"></span><span class="wing wr"></span><span class="bird-body"></span></span><span class="bird b2"><span class="wing wl"></span><span class="wing wr"></span><span class="bird-body"></span></span><span class="label">观鸟</span><i class="stk" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19c4-7 10-11 18-11 0 9-6 15-14 15H4z" fill="#bfe9dc" stroke="#12836b"/><path d="M10 19c3-2 6-2 9 0" stroke="#12836b"/><circle cx="24.5" cy="12" r="1.7" fill="#12836b"/><path d="M26.5 12.6l4 1.4-4 1.4z" fill="#ffb01a" stroke="#ffb01a"/></svg></i></div><div class="body"><div class="splist"><details class="sp sp-c1"><summary><i class="sp-ico"><svg viewBox="0 0 32 32" fill="currentColor" fill-opacity=".2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21.2c3.4-6.4 9.6-10.6 17-10.6 1.1 0 1.7.7 1.7 1.7 0 5.4-4.6 9.5-10.7 9.5H8.6A4.6 4.6 0 0 1 4 21.2z"/><path d="M4.2 22.6 1.2 27.4l5.6-2.8z"/><path d="M22.6 12.2l5.8 1.6-5.8 1.8z"/><circle cx="20" cy="13" r="1.15" fill="currentColor" opacity=".9"/></svg></i><span class="sp-name">黑嘴鸥</span><span class="sp-sci">Saundersilarus saundersi</span><span class="sp-badge">VU（易危）</span><span class="sp-more">查图 · 详情</span></summary><div class="sp-body"><div class="sp-links"><a class="sp-link" href="https://www.inaturalist.org/taxa/144500" target="_blank" rel="noopener noreferrer">图鉴页</a><a class="sp-link" href="https://image.baidu.com/search/index?tn=baiduimage&amp;word=%E9%BB%91%E5%98%B4%E9%B8%A5" target="_blank" rel="noopener noreferrer">查图片</a><a class="sp-link" href="https://www.birdreport.cn/" target="_blank" rel="noopener noreferrer">本地记录</a><a class="sp-link" href="https://ebird.org/explore" target="_blank" rel="noopener noreferrer">全球地图</a></div><dl class="sp-metas"><div class="sp-m"><dt>分类</dt><dd>鸥科 Laridae · 属 Saundersilarus</dd></div><div class="sp-m"><dt>保护等级</dt><dd>VU（IUCN Red List）；CR（Red List of Taiwan）</dd></div><div class="sp-m"><dt>本地最佳月份</dt><dd>01月、08月</dd></div><div class="sp-m"><dt>全球观测记录</dt><dd>1525</dd></div></dl><p class="sp-intro">黑嘴鸥是鸥科黑嘴鸥属的鸟，栖息在河口水域与潮间带沼泽，因栖息地减少被 IUCN 列为易危（VU）。分布记录见于中国（含中国台湾、中国澳门）、日本、朝鲜、韩国、俄罗斯、越南等地。iNaturalist 上另有台湾地区红名录的 CR 评级，口径与 IUCN 不一致，以 IUCN 为准。</p><p class="sp-src">简介来源：<a class="src-link" href="https://zh.wikipedia.org/zh-cn/黑嘴鸥" target="_blank" rel="noopener noreferrer">https://zh.wikipedia.org/zh-cn/黑嘴鸥</a></p><p class="sp-src">等级来源见上；iNaturalist 不含《国家重点保护野生动物名录》，涉及拍摄许可或执法请人工核对官方名录。</p></div></details><details class="sp sp-c2"><summary><i class="sp-ico"><svg viewBox="0 0 32 32" fill="currentColor" fill-opacity=".2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18.6c2.2-4 6-6.5 10.6-6.5 3 0 4.9 1.5 4.9 3.8 0 3.7-3.7 6.3-9.1 6.3h-4c-2.5 0-4.1-1.4-2.4-3.6z"/><circle cx="23.4" cy="12.6" r="2.9"/><path d="M25.6 12.1 31.6 13l-6 1.7z"/><path d="M12 22.2v6.4M17 22.2v6.4"/><path d="M10.4 28.6h3.4M15.4 28.6h3.4"/><circle cx="22.6" cy="12" r="1" fill="currentColor" opacity=".9"/></svg></i><span class="sp-name">蛎鹬</span><span class="sp-sci">Haematopus ostralegus</span><span class="sp-badge">NT（近危）</span><span class="sp-more">查图 · 详情</span></summary><div class="sp-body"><div class="sp-links"><a class="sp-link" href="https://www.inaturalist.org/taxa/4843" target="_blank" rel="noopener noreferrer">图鉴页</a><a class="sp-link" href="https://image.baidu.com/search/index?tn=baiduimage&amp;word=%E8%9B%8E%E9%B9%AC" target="_blank" rel="noopener noreferrer">查图片</a><a class="sp-link" href="https://www.birdreport.cn/" target="_blank" rel="noopener noreferrer">本地记录</a><a class="sp-link" href="https://ebird.org/explore" target="_blank" rel="noopener noreferrer">全球地图</a></div><dl class="sp-metas"><div class="sp-m"><dt>分类</dt><dd>蛎鹬科 Haematopodidae · 属 Haematopus</dd></div><div class="sp-m"><dt>保护等级</dt><dd>NT（IUCN Red List）</dd></div></dl><p class="sp-intro">蛎鹬（又名欧亚蛎鹬、蛎鸻）黑白羽色、喙长而直呈橙红色、眼红、腿暗粉，雌鸟喙略长于雄鸟。iNaturalist 上另收录了 10 条各国与地区红名录评级（LC 到 CR 不等），口径差异很大，本页只取 IUCN 一档。</p><p class="sp-src">简介来源：<a class="src-link" href="https://zh.wikipedia.org/zh-cn/蛎鹬" target="_blank" rel="noopener noreferrer">https://zh.wikipedia.org/zh-cn/蛎鹬</a></p><p class="sp-src">等级来源见上；iNaturalist 不含《国家重点保护野生动物名录》，涉及拍摄许可或执法请人工核对官方名录。</p></div></details><details class="sp sp-c3"><summary><i class="sp-ico"><svg viewBox="0 0 32 32" fill="currentColor" fill-opacity=".2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12.6" cy="22" rx="9" ry="5.2"/><path d="M8.2 19.8c2.6-1.5 5.8-1.7 8.4-.6"/><path d="M16.2 18.4c.4-5.6 2.4-8.9 5.3-8.9 2.3 0 3.7 1.7 3.2 3.7" fill="none"/><circle cx="22.9" cy="11.4" r="2.6"/><path d="M25.1 11 30.6 12.4l-5.5 1.9z"/><circle cx="22.2" cy="10.8" r=".95" fill="currentColor" opacity=".9"/></svg></i><span class="sp-name">大天鹅</span><span class="sp-sci">Cygnus cygnus</span><span class="sp-badge">LC（无危）</span><span class="sp-more">查图 · 详情</span></summary><div class="sp-body"><div class="sp-links"><a class="sp-link" href="https://www.inaturalist.org/taxa/6916" target="_blank" rel="noopener noreferrer">图鉴页</a><a class="sp-link" href="https://image.baidu.com/search/index?tn=baiduimage&amp;word=%E5%A4%A7%E5%A4%A9%E9%B9%85" target="_blank" rel="noopener noreferrer">查图片</a><a class="sp-link" href="https://www.birdreport.cn/" target="_blank" rel="noopener noreferrer">本地记录</a><a class="sp-link" href="https://ebird.org/explore" target="_blank" rel="noopener noreferrer">全球地图</a></div><dl class="sp-metas"><div class="sp-m"><dt>分类</dt><dd>鸭科 Anatidae · 属 Cygnus</dd></div><div class="sp-m"><dt>保护等级</dt><dd>LC（IUCN Red List）</dd></div></dl><p class="sp-intro">大天鹅又名鹄、黄嘴天鹅，是鸭科天鹅属的鸟。本页只给物种身份与保护等级，「10 月能看到」属于未核实结论，见下方注意。</p><p class="sp-src">简介来源：<a class="src-link" href="https://zh.wikipedia.org/zh-cn/大天鹅" target="_blank" rel="noopener noreferrer">https://zh.wikipedia.org/zh-cn/大天鹅</a></p><p class="sp-src">等级来源见上；iNaturalist 不含《国家重点保护野生动物名录》，涉及拍摄许可或执法请人工核对官方名录。</p></div></details><div class="sp sp-c4 sp-plain"><i class="sp-ico"><svg viewBox="0 0 32 32" fill="currentColor" fill-opacity=".2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18.6c2.2-4 6-6.5 10.6-6.5 3 0 4.9 1.5 4.9 3.8 0 3.7-3.7 6.3-9.1 6.3h-4c-2.5 0-4.1-1.4-2.4-3.6z"/><circle cx="23.4" cy="12.6" r="2.9"/><path d="M25.6 12.1 31.6 13l-6 1.7z"/><path d="M12 22.2v6.4M17 22.2v6.4"/><path d="M10.4 28.6h3.4M15.4 28.6h3.4"/><circle cx="22.6" cy="12" r="1" fill="currentColor" opacity=".9"/></svg></i><span class="sp-name">白腰杓鹬</span><a class="sp-link" href="https://www.inaturalist.org/search?q=%E7%99%BD%E8%85%B0%E6%9D%93%E9%B9%AC" target="_blank" rel="noopener noreferrer">图鉴页</a><a class="sp-link" href="https://image.baidu.com/search/index?tn=baiduimage&amp;word=%E7%99%BD%E8%85%B0%E6%9D%93%E9%B9%AC" target="_blank" rel="noopener noreferrer">查图片</a></div></div><dl class="dl"><div class="kv wide"><dt>观察点</dt><dd><span class="pl"><span class="pl-item"><a class="map" href="https://uri.amap.com/search?keyword=%E8%8D%A3%E6%88%90%E5%A4%A7%E5%A4%A9%E9%B9%85%E5%9B%BD%E5%AE%B6%E7%BA%A7%E8%87%AA%E7%84%B6%E4%BF%9D%E6%8A%A4%E5%8C%BA%E5%BC%80%E6%94%BE%E8%A7%82%E9%B8%9F%E7%82%B9" target="_blank" rel="noopener noreferrer">荣成大天鹅国家级自然保护区开放观鸟点</a><span class="pl-note">只走开放点</span></span><span class="pl-item"><a class="map" href="https://uri.amap.com/search?keyword=%E6%A1%91%E6%B2%9F%E6%B9%BE%E6%BB%A9%E6%B6%82" target="_blank" rel="noopener noreferrer">桑沟湾滩涂</a><span class="pl-note">低潮时水鸟集中</span></span></span></dd></div><div class="kv"><dt>最佳时段</dt><dd>日出前后 2 小时（05:00-07:30）为鸣唱与觅食高峰；傍晚 16:00-18:30 次高峰</dd></div><div class="kv"><dt>注意</dt><dd>10 月是候鸟南迁过境期，滩涂低潮时水鸟在裸露滩面集中觅食——赶海和观鸟可以同一时段同一地点完成。鸟类清单未经 eBird Token 复核，属未核实信息。</dd></div></dl></div></div><div class="card tall"><div class="scene scene-star"><span class="star s1"></span><span class="star s2"></span><span class="star s3"></span><span class="star s4"></span><span class="star s5"></span><span class="star s6"></span><span class="star s7"></span><span class="star s8"></span><span class="star-halo"></span><span class="moonp"></span><span class="label">观星</span><i class="stk" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3l3.4 9.6L29 16l-9.6 3.4L16 29l-3.4-9.6L3 16l9.6-3.4z" fill="#ffe066" stroke="#e0a400"/></svg></i></div><div class="body"><dl class="dl"><div class="kv"><dt>月相</dt><dd>10/1 约亏凸月 75%（9/22 实测 80.3%，需临近复查）</dd></div><div class="kv"><dt>暗夜窗口</dt><dd>19:02 天文昏影终之后；无月时段在凌晨</dd></div><div class="kv"><dt>可见行星</dt><dd>金星（黄昏西方）、水星（黄昏西方）、木星（黎明前）、火星（黎明前东方）</dd></div><div class="kv"><dt>观星条件</dt><dd>中等：月照偏强，适合月面与亮星团，深空目标建议另择月落后的日期</dd></div><div class="kv"><dt>天文事件</dt><dd>9/26 满月；10/10 新月</dd></div><div class="kv wide"><dt>观测点</dt><dd><span class="pl"><span class="pl-item"><a class="map" href="https://uri.amap.com/search?keyword=%E8%8D%A3%E6%88%90%E6%B5%B7%E8%BE%B9%E6%9A%97%E7%82%B9" target="_blank" rel="noopener noreferrer">荣成海边暗点</a><span class="pl-note">无照明无信号，结伴去并告知同行人</span></span></span></dd></div></dl><div class="skyrow"><figure class="skywrap"><svg class="skychart" viewBox="0 0 460 420" role="img" aria-label="当地当时的示意星图"><defs><clipPath id="to-skyclip"><circle cx="230" cy="198" r="150"/></clipPath></defs><circle class="sky-bg" cx="230" cy="198" r="150"/><g clip-path="url(#to-skyclip)"><circle class="skygrid" cx="230" cy="198" r="100.0"/><circle class="skygrid" cx="230" cy="198" r="50.0"/><path class="skygrid" d="M230 48 V348 M80 198 H380"/><path class="cst" d="M217.7 64.7 L215.5 55.9 L195.8 57.9 L193.5 65.7 L182.3 71.8 L174.2 77.8 L159.3 81.5"/><path class="cst" d="M253.4 157.9 L261.8 159.2 L261.3 151.3 L266.9 148.8 L267.2 140.6"/><path class="cst" d="M248.6 234.2 L246.3 212.8 L269.3 206.6 L276.5 229.3 L248.6 234.2"/><path class="cst" d="M162.3 173.9 L201.5 181.0 L166.9 235.7 L162.3 173.9"/><circle class="st" cx="162.3" cy="173.9" r="3.89"><title>织女星｜高度 47°｜方位 290°｜星等 0.03</title></circle><circle class="st" cx="315.2" cy="112.6" r="3.87"><title>五车二｜高度 18°｜方位 45°｜星等 0.08</title></circle><circle class="st" cx="166.9" cy="235.7" r="3.58"><title>牛郎星｜高度 46°｜方位 239°｜星等 0.77</title></circle><circle class="st" cx="363.5" cy="160.7" r="3.53"><title>毕宿五｜高度 7°｜方位 74°｜星等 0.87</title></circle><circle class="st" cx="247.5" cy="309.5" r="3.41"><title>北落师门｜高度 22°｜方位 171°｜星等 1.16</title></circle><circle class="st" cx="201.5" cy="181.0" r="3.38"><title>天津四｜高度 70°｜方位 301°｜星等 1.25</title></circle><circle class="st" cx="349.3" cy="122.4" r="3.21"><title>五车五｜高度 5°｜方位 58°｜星等 1.65</title></circle><circle class="st" cx="182.3" cy="71.8" r="3.16"><title>玉衡｜高度 9°｜方位 339°｜星等 1.77</title></circle><circle class="st" cx="217.7" cy="64.7" r="3.15"><title>天枢｜高度 10°｜方位 355°｜星等 1.79</title></circle><circle class="st" cx="299.6" cy="141.0" r="3.15"><title>天船三｜高度 36°｜方位 51°｜星等 1.79</title></circle><circle class="st" cx="159.3" cy="81.5" r="3.12"><title>摇光｜高度 8°｜方位 329°｜星等 1.86</title></circle><circle class="st" cx="231.3" cy="111.1" r="3.07"><title>北极星｜高度 38°｜方位 1°｜星等 1.98</title></circle><circle class="st" cx="313.7" cy="196.8" r="3.06"><title>娄宿三｜高度 40°｜方位 89°｜星等 2.00</title></circle><circle class="st" cx="285.7" cy="188.2" r="3.04"><title>奎宿九｜高度 56°｜方位 80°｜星等 2.05</title></circle><circle class="st" cx="269.3" cy="206.6" r="3.03"><title>壁宿二｜高度 66°｜方位 102°｜星等 2.06</title></circle><circle class="st" cx="294.3" cy="168.3" r="3.02"><title>天大将军一｜高度 48°｜方位 65°｜星等 2.10</title></circle><circle class="st" cx="174.2" cy="77.8" r="2.96"><title>开阳｜高度 10°｜方位 335°｜星等 2.23</title></circle><circle class="st" cx="261.8" cy="159.2" r="2.96"><title>王良一｜高度 60°｜方位 39°｜星等 2.24</title></circle><circle class="st" cx="253.4" cy="157.9" r="2.94"><title>王良四｜高度 62°｜方位 30°｜星等 2.28</title></circle><circle class="st" cx="215.5" cy="55.9" r="2.90"><title>天璇｜高度 4°｜方位 354°｜星等 2.37</title></circle><circle class="st" cx="246.3" cy="212.8" r="2.88"><title>室宿二｜高度 77°｜方位 132°｜星等 2.42</title></circle><circle class="st" cx="195.8" cy="57.9" r="2.88"><title>天玑｜高度 3°｜方位 346°｜星等 2.44</title></circle><circle class="st" cx="261.3" cy="151.3" r="2.86"><title>策｜高度 56°｜方位 34°｜星等 2.47</title></circle><circle class="st" cx="248.6" cy="234.2" r="2.85"><title>室宿一｜高度 66°｜方位 153°｜星等 2.49</title></circle><circle class="st" cx="266.9" cy="148.8" r="2.77"><title>阁道三｜高度 53°｜方位 37°｜星等 2.68</title></circle><circle class="st" cx="276.5" cy="229.3" r="2.71"><title>壁宿一｜高度 56°｜方位 124°｜星等 2.83</title></circle><circle class="st" cx="193.5" cy="65.7" r="2.51"><title>天权｜高度 8°｜方位 345°｜星等 3.31</title></circle><circle class="st" cx="267.2" cy="140.6" r="2.49"><title>阁道二｜高度 49°｜方位 33°｜星等 3.35</title></circle></g><circle class="sky-ring" cx="230" cy="198" r="150"/><text class="cstlbl" x="193.1" y="77.5">北斗七星</text><text class="cstlbl" x="279.2" y="130.9">仙后座</text><text class="cstlbl" x="280.0" y="247.7">秋季四边形</text><text class="cstlbl" x="143.5" y="191.5">夏季大三角</text><text class="stlbl" x="173.9" y="239.1" text-anchor="start">牛郎星</text><text class="stlbl" x="254.5" y="312.9" text-anchor="start">北落师门</text><text class="stlbl" x="208.5" y="184.4" text-anchor="start">天津四</text><text class="cardi" x="230.0" y="36.0" text-anchor="middle">北</text><text class="cardi" x="398.0" y="202.0" text-anchor="middle">东</text><text class="cardi" x="230.0" y="372.0" text-anchor="middle">南</text><text class="cardi" x="62.0" y="202.0" text-anchor="middle">西</text></svg><figcaption class="skycap">按 威海（37.51°N 122.11°E）2026-10-01T21:30 当地时刻计算，只画地平线以上的亮星；未做大气折射与光污染修正，权当认星提纲，别当精密星历。</figcaption></figure><div class="skycol"><figure class="skymoon"><svg class="moondisc" viewBox="-30 -30 60 60" width="56" height="56" role="img" aria-label="月相示意，照度 75%"><circle r="22.0" class="moon-dark"/><g class="moon-lit" transform="scale(-1,1)"><path d="M 0 -22.0 A 22.0 22.0 0 0 1 0 22.0 A 11.00 22.0 0 0 0 0 -22.0 Z"/></g><circle r="22.0" class="moon-edge"/></svg><figcaption>月面照度 <b>75%</b><br><span>亏凸月（亮面在左）</span></figcaption></figure><div class="tgs"><span class="tgs-t">今晚看什么</span><span class="tg"><b>月面与环形山</b><em>月球</em><span class="tg-nt">月照约 75%，今晚最稳的目标</span></span><span class="tg"><b>仙后座 + 飞马座四边形</b><em>星座</em><span class="tg-nt">星图里位于天顶附近，秋季认星从这里入手</span></span><span class="tg"><b>夏季大三角</b><em>亮星</em><span class="tg-nt">星图里偏西，正在西沉，趁早看</span></span><span class="tg"><b>深空天体（星系、星云）</b><em>深空</em><span class="tg-nt">月照 75% 下基本看不成，另择无月夜</span></span></div></div></div><div class="sp-links"><a class="sp-link" href="https://stellarium-web.org/" target="_blank" rel="noopener noreferrer">在线星图（Stellarium）</a><a class="sp-link" href="https://www.lightpollutionmap.info/" target="_blank" rel="noopener noreferrer">光污染地图</a></div></div></div><div class="card tall"><div class="scene scene-sun"><span class="ray"></span><span class="sun"></span><span class="cloudbar c1"></span><span class="cloudbar c2"></span><span class="label">日出日落</span><i class="stk" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 24h13a5.5 5.5 0 0 0 .8-10.9A7.5 7.5 0 0 0 8 14.2 4.2 4.2 0 0 0 9 24z" fill="#e3f6fd" stroke="#00a1d6"/></svg></i></div><div class="body"><dl class="dl"><div class="kv"><dt>时刻</dt><dd>日出 05:45 · 日落 17:37</dd></div><div class="kv"><dt>黄金时刻</dt><dd>05:45-06:45（10/1）；05:46-06:46（10/2）</dd></div><div class="kv"><dt>蓝调时刻</dt><dd>05:20-05:45</dd></div><div class="kv wide"><dt>观测点</dt><dd><span class="pl"><span class="pl-item"><a class="map" href="https://uri.amap.com/search?keyword=%E6%88%90%E5%B1%B1%E5%A4%B4" target="_blank" rel="noopener noreferrer">成山头</a><span class="pl-note">朝东无遮挡</span></span><span class="pl-item"><a class="map" href="https://uri.amap.com/search?keyword=%E8%8D%A3%E6%88%90%E6%A8%B1%E8%8A%B1%E6%B9%96%E4%B8%9C%E5%B2%B8" target="_blank" rel="noopener noreferrer">荣成樱花湖东岸</a><span class="pl-note">免费备选，同为朝东</span></span></span></dd></div></dl><figure class="sunband"><svg class="sunband-svg" viewBox="0 0 640 118" role="img" aria-label="日出日落天光时间条"><defs><linearGradient id="to-sky" x1="0" y1="0" x2="1" y2="0"><stop offset="0.0000" stop-color="#2b3a67"/><stop offset="0.0000" stop-color="#2b3a67"/><stop offset="0.0167" stop-color="#2b3a67"/><stop offset="0.0333" stop-color="#2b3a67"/><stop offset="0.0500" stop-color="#5d63a8"/><stop offset="0.0667" stop-color="#5d63a8"/><stop offset="0.0833" stop-color="#5d63a8"/><stop offset="0.1000" stop-color="#5d63a8"/><stop offset="0.1167" stop-color="#cfeaf7"/><stop offset="0.1333" stop-color="#cfeaf7"/><stop offset="0.1500" stop-color="#cfeaf7"/><stop offset="0.1667" stop-color="#cfeaf7"/><stop offset="0.1833" stop-color="#cfeaf7"/><stop offset="0.2000" stop-color="#cfeaf7"/><stop offset="0.2167" stop-color="#cfeaf7"/><stop offset="0.2333" stop-color="#cfeaf7"/><stop offset="0.2500" stop-color="#cfeaf7"/><stop offset="0.2667" stop-color="#cfeaf7"/><stop offset="0.2833" stop-color="#cfeaf7"/><stop offset="0.3000" stop-color="#cfeaf7"/><stop offset="0.3167" stop-color="#cfeaf7"/><stop offset="0.3333" stop-color="#cfeaf7"/><stop offset="0.3500" stop-color="#cfeaf7"/><stop offset="0.3667" stop-color="#cfeaf7"/><stop offset="0.3833" stop-color="#cfeaf7"/><stop offset="0.4000" stop-color="#cfeaf7"/><stop offset="0.4167" stop-color="#cfeaf7"/><stop offset="0.4333" stop-color="#cfeaf7"/><stop offset="0.4500" stop-color="#cfeaf7"/><stop offset="0.4667" stop-color="#cfeaf7"/><stop offset="0.4833" stop-color="#cfeaf7"/><stop offset="0.5000" stop-color="#cfeaf7"/><stop offset="0.5167" stop-color="#cfeaf7"/><stop offset="0.5333" stop-color="#cfeaf7"/><stop offset="0.5500" stop-color="#cfeaf7"/><stop offset="0.5667" stop-color="#cfeaf7"/><stop offset="0.5833" stop-color="#cfeaf7"/><stop offset="0.6000" stop-color="#cfeaf7"/><stop offset="0.6167" stop-color="#cfeaf7"/><stop offset="0.6333" stop-color="#cfeaf7"/><stop offset="0.6500" stop-color="#cfeaf7"/><stop offset="0.6667" stop-color="#cfeaf7"/><stop offset="0.6833" stop-color="#cfeaf7"/><stop offset="0.7000" stop-color="#cfeaf7"/><stop offset="0.7167" stop-color="#cfeaf7"/><stop offset="0.7333" stop-color="#cfeaf7"/><stop offset="0.7500" stop-color="#cfeaf7"/><stop offset="0.7667" stop-color="#cfeaf7"/><stop offset="0.7833" stop-color="#cfeaf7"/><stop offset="0.8000" stop-color="#cfeaf7"/><stop offset="0.8167" stop-color="#cfeaf7"/><stop offset="0.8333" stop-color="#cfeaf7"/><stop offset="0.8500" stop-color="#cfeaf7"/><stop offset="0.8667" stop-color="#cfeaf7"/><stop offset="0.8833" stop-color="#cfeaf7"/><stop offset="0.9000" stop-color="#cfeaf7"/><stop offset="0.9167" stop-color="#5d63a8"/><stop offset="0.9333" stop-color="#5d63a8"/><stop offset="0.9500" stop-color="#5d63a8"/><stop offset="0.9667" stop-color="#5d63a8"/><stop offset="0.9833" stop-color="#5d63a8"/><stop offset="1.0000" stop-color="#2b3a67"/><stop offset="1.0000" stop-color="#2b3a67"/></linearGradient></defs><rect x="34" y="34" width="594" height="44" rx="10" fill="url(#to-sky)"/><rect class="b-blue" x="86.8" y="34" width="16.5" height="44" rx="4"/><rect class="b-gold" x="103.3" y="34" width="39.6" height="44" rx="4"/><text class="bandlbl" x="123.1" y="28" text-anchor="middle">黄金</text><rect class="b-gold" x="533.6" y="34" width="39.6" height="44" rx="4"/><text class="bandlbl" x="553.4" y="28" text-anchor="middle">黄金</text><rect class="b-blue" x="573.2" y="34" width="16.5" height="44" rx="4"/><path class="t-rise" d="M103.3 31 V81"/><text class="ticklbl" x="103.3" y="95" text-anchor="middle">日出 05:45</text><path class="t-set" d="M573.2 31 V81"/><text class="ticklbl" x="573.2" y="95" text-anchor="middle">日落 17:37</text><text class="axlbl" x="34.0" y="112" text-anchor="middle">04:00</text><text class="axlbl" x="113.2" y="112" text-anchor="middle">06:00</text><text class="axlbl" x="192.4" y="112" text-anchor="middle">08:00</text><text class="axlbl" x="271.6" y="112" text-anchor="middle">10:00</text><text class="axlbl" x="350.8" y="112" text-anchor="middle">12:00</text><text class="axlbl" x="430.0" y="112" text-anchor="middle">14:00</text><text class="axlbl" x="509.2" y="112" text-anchor="middle">16:00</text><text class="axlbl" x="588.4" y="112" text-anchor="middle">18:00</text></svg><div class="sblegend"><span class="sb sb-blue">蓝调时刻</span><span class="sb sb-gold">黄金时刻</span><span class="sb sb-day">白昼</span><span class="sb sb-night">夜间</span></div><figcaption class="skycap">蓝调与黄金时刻取自接口；黄昏侧按同一套定义（日落前后）推算，未单独取数。条上窄到放不下字的时段看下方色块图例对位置。</figcaption></figure><div class="glow"><div class="glow-head"><b>霞光指数</b><span class="glow-lv">较好</span><span class="glow-dots"><i class="on"></i><i class="on"></i><i class=""></i></span><span class="glow-num">2/3</span></div><ul class="glow-why"><li>中高云 9%（偏少，云层不足以形成大范围霞光）</li><li>低云 9%（通透，阳光可达云底）</li><li>能见度 23km（空气通透）</li><li>相对湿度 53%（水汽适中）</li></ul><div class="glow-data"><span class="gd"><b>低云</b>9%</span><span class="gd"><b>中高云</b>18%</span><span class="gd"><b>高云</b>0%</span><span class="gd"><b>能见度</b>23 km</span><span class="gd"><b>湿度</b>53%</span></div><p class="glow-note">按云量分层、通透度、水汽算出的参考值，不是官方预报；出门前扫一眼实景天色更靠谱。</p></div></div></div><div class="card tall"><div class="scene scene-sea"><span class="wave w1"></span><span class="wave w2"></span><span class="wave w3"></span><span class="seashell"></span><span class="label">赶海</span><i class="stk" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 25a12 12 0 0 1 24 0z" fill="#ffd9e6" stroke="#e5457a"/><path d="M16 13v12M10 15l2.6 10M22 15l-2.6 10" stroke="#e5457a"/></svg></i></div><div class="body"><dl class="dl"><div class="kv"><dt>潮汐</dt><dd>10/1 干潮 06:08（-0.71m，MSL 基准）；接口数据仅覆盖至 07:00，属部分数据</dd></div><div class="kv"><dt>赶海窗口</dt><dd>04:38-07:38</dd></div><div class="kv"><dt>潮期</dt><dd>农历八月廿一前后，中潮（已过大潮期，滩涂露出幅度中等）</dd></div><div class="kv wide"><dt>地点</dt><dd><span class="pl"><span class="pl-item"><a class="map" href="https://uri.amap.com/search?keyword=%E6%A1%91%E6%B2%9F%E6%B9%BE%E6%BB%A9%E6%B6%82" target="_blank" rel="noopener noreferrer">桑沟湾滩涂</a><span class="pl-note">沙泥混合，有蛤蜊与蛏子</span></span><span class="pl-item"><a class="map" href="https://uri.amap.com/search?keyword=%E8%8D%A3%E6%88%90%E7%A4%81%E7%9F%B3%E5%8C%BA" target="_blank" rel="noopener noreferrer">荣成礁石区</a><span class="pl-note">见螺类</span></span></span></dd></div><div class="kv"><dt>安全</dt><dd>07:38 前必须撤到岸上，涨潮从潮沟灌入，看着还浅其实已过膝。潮位为 MSL 基准，与官方潮汐表可能有系统偏差，出发前对照国家海洋信息中心数据复核。</dd></div></dl><div class="tide"><input class="tp" type="radio" name="td-beachcombing" id="td-beachcombing-0"><input class="tp" type="radio" name="td-beachcombing" id="td-beachcombing-1"><input class="tp" type="radio" name="td-beachcombing" id="td-beachcombing-2"><input class="tp" type="radio" name="td-beachcombing" id="td-beachcombing-3"><input class="tp" type="radio" name="td-beachcombing" id="td-beachcombing-4"><input class="tp" type="radio" name="td-beachcombing" id="td-beachcombing-5"><input class="tp" type="radio" name="td-beachcombing" id="td-beachcombing-6" checked><input class="tp" type="radio" name="td-beachcombing" id="td-beachcombing-7"><div class="tide-plot"><svg class="tide-svg" viewBox="0 0 640 214" role="img" aria-label="逐时潮位曲线，含赶海窗口"><path class="tarea" d="M40.0 168.0 L40.0,43.2 L118.7,52.2 L197.3,70.6 L276.0,95.7 L354.7,122.1 L433.3,142.3 L522.5,150.8 L590.7,145.9 L590.7 168.0 Z"/><rect class="twindow" x="404.5" y="26" width="225.5" height="142" rx="8"/><text class="twlbl" x="517.2" y="41" text-anchor="middle">赶海窗口</text><path class="tline" d="M40.0,43.2 L118.7,52.2 L197.3,70.6 L276.0,95.7 L354.7,122.1 L433.3,142.3 L522.5,150.8 L590.7,145.9"/><path class="tgrid" d="M40 168.0 H630"/><text class="taxlbl" x="34" y="171.6" text-anchor="end">-1.09</text><path class="tgrid" d="M40 97.0 H630"/><text class="taxlbl" x="34" y="100.6" text-anchor="end">0.49</text><path class="tgrid" d="M40 26.0 H630"/><text class="taxlbl" x="34" y="29.6" text-anchor="end">2.07</text><text class="taxlbl" x="40.0" y="190" text-anchor="middle">00:00</text><text class="taxlbl" x="197.3" y="190" text-anchor="middle">02:00</text><text class="taxlbl" x="354.7" y="190" text-anchor="middle">04:00</text><text class="taxlbl" x="512.0" y="190" text-anchor="middle">06:00</text></svg><div class="tp-marks"><label class="tpdot" for="td-beachcombing-0" style="left:6.25%;top:20.19%" title="00:00 潮位"> <i></i></label><label class="tpdot" for="td-beachcombing-1" style="left:18.54%;top:24.38%" title="01:00 潮位"> <i></i></label><label class="tpdot" for="td-beachcombing-2" style="left:30.83%;top:32.97%" title="02:00 潮位"> <i></i></label><label class="tpdot" for="td-beachcombing-3" style="left:43.12%;top:44.70%" title="03:00 潮位"> <i></i></label><label class="tpdot" for="td-beachcombing-4" style="left:55.42%;top:57.06%" title="04:00 潮位"> <i></i></label><label class="tpdot" for="td-beachcombing-5" style="left:67.71%;top:66.48%" title="05:00 潮位"> <i></i></label><label class="tpdot" for="td-beachcombing-6" style="left:81.64%;top:70.46%" title="06:08 干潮"> <i></i></label><label class="tpdot" for="td-beachcombing-7" style="left:92.29%;top:68.16%" title="07:00 潮位"> <i></i></label></div></div><div class="tp-panels"><div class="tp-panel"><span class="tp-t">00:00</span><b class="tp-h">+1.69 m</b><span class="tp-tr">平潮</span><p>还没进窗口，潮水一般还在退，可以岸边准备装备。</p></div><div class="tp-panel"><span class="tp-t">01:00</span><b class="tp-h">+1.49 m</b><span class="tp-tr">退潮</span><p>还没进窗口，潮水一般还在退，可以岸边准备装备。</p></div><div class="tp-panel"><span class="tp-t">02:00</span><b class="tp-h">+1.08 m</b><span class="tp-tr">退潮</span><p>还没进窗口，潮水一般还在退，可以岸边准备装备。</p></div><div class="tp-panel"><span class="tp-t">03:00</span><b class="tp-h">+0.52 m</b><span class="tp-tr">退潮</span><p>还没进窗口，潮水一般还在退，可以岸边准备装备。</p></div><div class="tp-panel"><span class="tp-t">04:00</span><b class="tp-h">-0.07 m</b><span class="tp-tr">退潮</span><p>还没进窗口，潮水一般还在退，可以岸边准备装备。</p></div><div class="tp-panel"><span class="tp-t">05:00</span><b class="tp-h">-0.52 m</b><span class="tp-tr">退潮</span><p>潮水还在退，可以沿滩面向外走，注意脚下潮沟。</p></div><div class="tp-panel"><span class="tp-t">06:08</span><b class="tp-h">-0.71 m</b><em class="tp-kind">干潮</em><span class="tp-tr">退潮</span><p>干潮前后，滩涂裸露最广，正是下滩的时刻。</p></div><div class="tp-panel"><span class="tp-t">07:00</span><b class="tp-h">-0.60 m</b><span class="tp-tr">回涨</span><p>潮位在回涨，滩面开始回水，别再往深处走。</p></div></div><p class="tide-hint">点曲线上的圆点，看那一刻的潮位和能不能下滩。</p><p class="skycap">逐时潮位来自 s2；曲线只画接口真实给到的时段，没数据的时段不补线。</p></div></div></div></div></section><section id="sec-days" class="sec"><h2><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3.5"/><path d="M8 3.5v3M16 3.5v3M3.5 10.5h17"/></svg></span>逐日行程<i class="stk" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="24" height="16" rx="4.5" fill="#e3f6fd" stroke="#00a1d6"/><path d="M12 10l2-3h4l2 3" fill="#cfeffb" stroke="#00a1d6"/><circle cx="16" cy="18" r="4.6" fill="#fff" stroke="#00a1d6"/></svg></i></h2><div class="daynav"><a href="#day-D1"><b>D1</b>10-01</a><a href="#day-D2"><b>D2</b>10-02</a></div><details class="day" id="day-D1" open><summary><span class="dnum">D1</span><span class="dmeta"><em>10-01（周四）</em>荣成滩涂：赶海、观鸟、看日落</span><span class="dcnt">7 项</span></summary><div class="dbody"><div class="tl"><div class="slot"><div class="t">04:30-07:20</div><div class="ti">赶海（干潮 06:08）<span class="tag k-nature">自然观察</span></div><div><span class="pl"> @ <a class="map" href="https://uri.amap.com/search?keyword=%E6%A1%91%E6%B2%9F%E6%B9%BE%E6%BB%A9%E6%B6%82" target="_blank" rel="noopener noreferrer">桑沟湾滩涂</a></span><span class="pl">（无需预约）</span></div><div class="nt">干潮 06:08，潮位 -0.71m；滩涂裸露最广的窗口是 04:38-07:38。带雨靴、手套、小铲子、盐瓶。07:20 开始往岸上撤。</div></div><div class="slot"><div class="t">07:40-09:00</div><div class="ti">早餐 + 回住地休整补觉<span class="tag k-meal">用餐</span></div><div><span class="pl"> @ <a class="map" href="https://uri.amap.com/search?keyword=%E8%8D%A3%E6%88%90%E5%B8%82%E5%8C%BA" target="_blank" rel="noopener noreferrer">荣成市区</a></span><span class="pl">（无需预约）</span></div><div class="nt">四点半起床，这一觉必须补，否则下午和晚上都撑不住。</div></div><div class="slot"><div class="t">09:30-11:30</div><div class="ti">保护区观鸟<span class="tag k-nature">自然观察</span></div><div><span class="pl"> @ <a class="map" href="https://uri.amap.com/search?keyword=%E8%8D%A3%E6%88%90%E5%A4%A7%E5%A4%A9%E9%B9%85%E4%BF%9D%E6%8A%A4%E5%8C%BA%E5%BC%80%E6%94%BE%E8%A7%82%E9%B8%9F%E7%82%B9" target="_blank" rel="noopener noreferrer">荣成大天鹅保护区开放观鸟点</a></span><span class="pl">（无需预约）</span></div><div class="nt">退潮后水鸟仍在滩面觅食。只在开放观鸟点活动，不进禁入滩涂。</div></div><div class="slot"><div class="t">12:00-13:30</div><div class="ti">海鲜午餐（市场代加工）<span class="tag k-meal">用餐</span></div><div><span class="pl"> @ <a class="map" href="https://uri.amap.com/search?keyword=%E8%8D%A3%E6%88%90%E6%B8%94%E6%B8%AF%E7%A0%81%E5%A4%B4" target="_blank" rel="noopener noreferrer">荣成渔港码头</a></span><span class="pl">（无需预约）</span></div><div class="nt">自己挑海鲜，找档口加工，加工费按斤算。节假日中午排队约 30 分钟。</div></div><div class="slot"><div class="t">15:00-17:30</div><div class="ti">樱花湖散步 + 看日落 17:37<span class="tag k-visit">景点</span></div><div><span class="pl"> @ <a class="map" href="https://uri.amap.com/search?keyword=%E8%8D%A3%E6%88%90%E6%A8%B1%E8%8A%B1%E6%B9%96" target="_blank" rel="noopener noreferrer">荣成樱花湖</a></span><span class="pl">（无需预约）</span></div></div><div class="slot"><div class="t">18:30-19:30</div><div class="ti">晚餐<span class="tag k-meal">用餐</span></div><div><span class="pl"> @ <a class="map" href="https://uri.amap.com/search?keyword=%E8%8D%A3%E6%88%90%E5%B8%82%E5%8C%BA" target="_blank" rel="noopener noreferrer">荣成市区</a></span><span class="pl">（无需预约）</span></div></div><div class="slot"><div class="t">21:30-23:00</div><div class="ti">观星（月面与亮星团）<span class="tag k-nature">自然观察</span></div><div><span class="pl"> @ <a class="map" href="https://uri.amap.com/search?keyword=%E8%8D%A3%E6%88%90%E6%B5%B7%E8%BE%B9%E6%9A%97%E7%82%B9" target="_blank" rel="noopener noreferrer">荣成海边暗点</a></span><span class="pl">（无需预约）</span></div><div class="nt">月照约 75%，今晚只看月面和亮星团；深空目标改到月落之后的日期。海边夜风大，带厚外套。</div></div></div><div class="alt"><b>备选</b> 全天下雨 → 改荣成博物馆、天鹅科普馆，赶海顺延到 D2 清晨同一潮期｜触发条件：日降水 &gt; 5mm 或海面风力 6 级以上</div><div class="alt"><b>备选</b> 夜间云量 &gt; 60% → 改为住地休息，观星移到 D2 无望则放弃｜触发条件：云量 &gt; 60%</div></div></details><details class="day" id="day-D2" open><summary><span class="dnum">D2</span><span class="dmeta"><em>10-02（周五）</em>成山头日出 + 环海路，下午返程</span><span class="dcnt">6 项</span></summary><div class="dbody"><div class="tl"><div class="slot"><div class="t">05:00-06:30</div><div class="ti">成山头看日出（05:46）<span class="tag k-nature">自然观察</span></div><div><span class="pl"> @ <a class="map" href="https://uri.amap.com/search?keyword=%E6%88%90%E5%B1%B1%E5%A4%B4%E6%99%AF%E5%8C%BA" target="_blank" rel="noopener noreferrer">成山头景区</a></span><span class="pl">（待预约）</span></div><div class="nt">04:50 前到观景台占位。景区停车位少，节假日 5:30 后基本满，建议打车或提前停外围。</div></div><div class="slot"><div class="t">07:00-09:00</div><div class="ti">早餐 + 补眠<span class="tag k-rest">休整</span></div><div><span class="pl"> @ <a class="map" href="https://uri.amap.com/search?keyword=%E8%8D%A3%E6%88%90%E4%BD%8F%E5%9C%B0" target="_blank" rel="noopener noreferrer">荣成住地</a></span><span class="pl">（无需预约）</span></div></div><div class="slot"><div class="t">09:30-12:00</div><div class="ti">环海路骑行<span class="tag k-visit">景点</span></div><div><span class="pl"> @ <a class="map" href="https://uri.amap.com/search?keyword=%E8%8D%A3%E6%88%90%E7%8E%AF%E6%B5%B7%E8%B7%AF" target="_blank" rel="noopener noreferrer">荣成环海路</a></span><span class="pl">（无需预约）</span></div><div class="nt">共享单车沿线可还车。逆时针骑风景更好，但东北风天顶风吃力。</div></div><div class="slot"><div class="t">12:30-13:30</div><div class="ti">午餐<span class="tag k-meal">用餐</span></div><div><span class="pl"> @ <a class="map" href="https://uri.amap.com/search?keyword=%E8%8D%A3%E6%88%90%E5%B8%82%E5%8C%BA" target="_blank" rel="noopener noreferrer">荣成市区</a></span><span class="pl">（无需预约）</span></div></div><div class="slot"><div class="t">13:40-14:40</div><div class="ti">前往威海站<span class="tag k-transport">交通</span></div><div><span class="pl"> @ <a class="map" href="https://uri.amap.com/search?keyword=%E5%A8%81%E6%B5%B7%E7%AB%99" target="_blank" rel="noopener noreferrer">威海站</a></span><span class="pl">（无需预约）</span></div><div class="nt">荣成到威海站约 1 小时，打车约 120 元，城际巴士班次较疏。这段路不能卡点。</div></div><div class="slot"><div class="t">15:30</div><div class="ti">返程高铁<span class="tag k-transport">大交通</span></div><div><span class="pl"> @ <a class="map" href="https://uri.amap.com/search?keyword=%E5%A8%81%E6%B5%B7%E7%AB%99" target="_blank" rel="noopener noreferrer">威海站</a></span><span class="pl">（待预约）</span></div><div class="nt">车次与准确发车时间待定，购票后填入。方案不预设车次，避免按错时间赶车。</div></div></div><div class="alt"><b>备选</b> 成山头临时管制或索道停运 → 改在樱花湖东岸看日出，同为朝东无遮挡，免费｜触发条件：景区临时管制或天气原因关闭</div><div class="alt"><b>备选</b> 骑行遇大风 → 改环海路自驾或景区电瓶车，行程顺延 1 小时｜触发条件：海面风力 6 级以上</div></div></details></section><section id="sec-food" class="sec"><h2><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11h17a8.5 8.5 0 0 1-17 0z"/><path d="M7.5 8.5V4M12 8.5V3.5M16.5 8.5V4"/></svg></span>美食推荐<i class="stk" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 11h15l-2 16h-11z" fill="#fff4dc" stroke="#b06a00"/><path d="M7 8h18" stroke="#b06a00"/><path d="M20.5 3.5L17 10" stroke="#e5457a"/><circle cx="13" cy="18" r="1.7" fill="#b06a00"/><circle cx="18.5" cy="22" r="1.7" fill="#b06a00"/></svg></i></h2><table><thead><tr><th>店/摊</th><th class="num">人均</th><th>为什么去</th><th>备注</th></tr></thead><tbody><tr><td>荣成渔港码头海鲜市场</td><td class="num">¥120-180/人</td><td>本地人买海鲜的地方，可现场找档口代加工，加工费按斤计</td><td>中午 11:30 后排队，建议 11:00 前到</td></tr><tr><td>鲅鱼水饺（荣成老店）</td><td class="num">¥35-45/人</td><td>胶东做法，皮薄馅足，秋季鲅鱼正肥</td><td>部分店只做午市，晚上不营业</td></tr><tr><td>荣成无花果（当季）</td><td class="num">¥15-25/斤</td><td>10 月正是本地无花果尾季，甜度高</td><td>路边果农自售比超市便宜</td></tr></tbody></table></section><section id="sec-budget" class="sec"><h2><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="3.5"/><path d="M3 10.5h18M16 14.5h1.5"/></svg></span>预算明细<i class="stk" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="16" cy="16" r="11" fill="#ffe066" stroke="#e0a400"/><path d="M16 9v14M20 12.5h-5.5a2.6 2.6 0 0 0 0 5.2h3a2.6 2.6 0 0 1 0 5.2H11" stroke="#b06a00"/></svg></i></h2><table><tbody><tr><td>大交通（往返高铁）<div class="bar"><i style="left:77.8%;width:22.2%"></i></div></td><td class="num">700 – 900</td></tr><tr><td>住宿（荣成 1 晚）<div class="bar"><i style="left:38.9%;width:16.7%"></i></div></td><td class="num">350 – 500</td></tr><tr><td>门票<div class="bar"><i style="left:11.1%;width:11.1%"></i></div></td><td class="num">100 – 200</td></tr><tr><td>餐饮<div class="bar"><i style="left:44.4%;width:11.1%"></i></div></td><td class="num">400 – 500</td></tr><tr><td>市内与城际交通<div class="bar"><i style="left:16.7%;width:11.1%"></i></div></td><td class="num">150 – 250</td></tr><tr><td>其他（装备、零食）<div class="bar"><i style="left:11.1%;width:5.6%"></i></div></td><td class="num">100 – 150</td></tr><tr><td class="total">合计（CNY）</td><td class="num total"><span class="hl">1800 – 2500</span></td></tr></tbody></table></section><section id="sec-todo" class="sec"><h2><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4.5"/><path d="M8.5 12.3l2.4 2.4 4.6-5.1"/></svg></span>出发前待办<i class="stk" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3l3.4 9.6L29 16l-9.6 3.4L16 29l-3.4-9.6L3 16l9.6-3.4z" fill="#ffe066" stroke="#e0a400"/></svg></i></h2><div class="card"><label class="todo"><input type="checkbox"><span class="txt"><span class="ti">【必办】买成山头门票（确认日出时段是否单独预约）　截止 9/28 前</span><div class="nt">没办成怎么办：改在樱花湖东岸看日出，免费且朝东无遮挡</div></span></label><label class="todo"><input type="checkbox"><span class="txt"><span class="ti">【必办】买 10/2 返程高铁票　截止 9/27 前</span><div class="nt">没办成怎么办：改乘长途大巴，或顺延一天返程避开国庆返程高峰</div></span></label><label class="todo"><input type="checkbox"><span class="txt"><span class="ti">【必办】准备赶海装备（雨靴、手套、小铲子、盐瓶）　截止 出发前</span><div class="nt">没办成怎么办：荣成渔港附近渔具店可现买，价格比北京便宜</div></span></label><label class="todo"><input type="checkbox"><span class="txt"><span class="ti">【可选】申请 eBird Token，复核鸟种清单　截止 出发前 3 天</span><div class="nt">没办成怎么办：用网上鸟况资料代替，方案里已把这条标为未核实</div></span></label></div></section><section id="sec-pitfalls" class="sec"><h2><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5 3.6 19h16.8L12 4.5z"/><path d="M12 10v4M12 16.6h.01"/></svg></span>踩坑指南<i class="stk" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4l9 22H7z" fill="#ffd1e3" stroke="#e5457a"/><path d="M11.4 15h9.2M9.4 21h13.2" stroke="#e5457a"/><rect x="4" y="25.5" width="24" height="4.5" rx="2.2" fill="#ff9f7a" stroke="#e5457a"/></svg></i></h2><div class="warn"><b>赶海看错潮汐时间</b><span class="tag sev-minor">留意</span><div>涨潮从潮沟灌进来，速度远快于步行，滩涂深处几分钟就能没过膝盖。</div><div class="when">什么时候遇到：干潮后约 1.5 小时起，尤其是 07:38 之后。</div><div class="when">怎么绕：07:20 开始往岸上撤；进滩涂前先认准最近的岸线方向和潮沟位置。</div></div><div class="warn"><b>保护区滩涂有禁入区</b><span class="tag sev-minor">留意</span><div>大天鹅保护区部分滩涂封闭管理，进入要担责，也会惊扰水鸟。</div><div class="when">什么时候遇到：无标识的滩涂、有围栏或警示牌的区域。</div><div class="when">怎么绕：只在开放观鸟点活动；不确定就打保护区电话问清边界。</div></div><div class="warn"><b>成山头停车位严重不足</b><span class="tag sev-minor">留意</span><div>景区停车位数量少，国庆期间 5:30 后就基本满了。</div><div class="when">什么时候遇到：节假日清晨，看日出的人集中到达。</div><div class="when">怎么绕：提前 40 分钟到，或直接打车；外围停车后步行约 15 分钟。</div></div><div class="warn"><b>观星点夜间无照明、无信号</b><span class="tag sev-minor">留意</span><div>荣成海边暗点信号弱、没有路灯，独自前往有风险。</div><div class="when">什么时候遇到：21:00 之后。</div><div class="when">怎么绕：结伴前往，带红光手电（白光会破坏暗适应），把落脚点提前告知同行人。</div></div><div class="warn"><b>荣成到威海站车程 1 小时</b><span class="tag sev-minor">留意</span><div>很多人以为荣成就挨着威海市区，实际城际巴士班次疏。</div><div class="when">什么时候遇到：返程当天。</div><div class="when">怎么绕：留足 1.5 小时余量，或直接打车（约 120 元）避免误车。</div></div></section><section id="sec-sources" class="sec"><h2><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.2 13.4a4 4 0 0 0 5.6 0l2.6-2.6a4 4 0 0 0-5.6-5.6l-1.1 1.1"/><path d="M13.8 10.6a4 4 0 0 0-5.6 0l-2.6 2.6a4 4 0 0 0 5.6 5.6l1.1-1.1"/></svg></span>依据索引<i class="stk" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3a9 9 0 0 1 9 9c0 7-9 17-9 17S7 19 7 12a9 9 0 0 1 9-9z" fill="#ffe9f1" stroke="#e5457a"/><circle cx="16" cy="12" r="3.4" fill="#fff" stroke="#e5457a"/></svg></i></h2><div class="legend">方案里每条关键数据都能追到下面某一项。追不到的标了「估算」或「未查到」。</div><table class="facts-tbl"><thead><tr><th>编号</th><th>结论</th><th>状态</th><th>来源</th><th>取数日期</th></tr></thead><tbody><tr><td>f1</td><td>威海 2026-10-01 日出 05:45、日落 17:37（当地时间 UTC+8）</td><td>已核实</td><td class="srcs">Sunrise-Sunset.org API</td><td class="srcs">2026-09-22</td></tr><tr><td>f2</td><td>威海 2026-10-01 干潮 06:08（-0.71m，MSL 基准）；接口数据仅覆盖至 07:00，属部分数据</td><td>估算</td><td class="srcs">Open-Meteo Marine API（潮位）</td><td class="srcs">2026-09-22</td></tr><tr><td>f3</td><td>观星条件：2026-09-22 实测月照 80.3%（亏凸月）、无月暗夜 145.8 分钟；10/1 月相需临近复查</td><td>估算</td><td class="srcs">CycleCalcs Astronomy API</td><td class="srcs">2026-09-22</td></tr><tr><td>f4</td><td>荣成大天鹅保护区近期记录到黑嘴鸥、蛎鹬等水鸟（未用 eBird Token 复核）</td><td>未核实</td><td class="srcs">网上公开资料整理（未用官方接口复核）</td><td class="srcs">2026-09-22</td></tr><tr><td>f5</td><td>荣成到威海站车程约 1 小时，打车约 120 元</td><td>估算</td><td class="srcs">网上公开资料整理（未用官方接口复核）</td><td class="srcs">2026-09-22</td></tr><tr><td>f6</td><td>威海 2026-10-01 日出霞光（火烧云）评分 2/3，等级「较好」，依据为中高云 9%、低云 9%、能见度 23km、湿度 53%</td><td>估算</td><td class="srcs">Open-Meteo Forecast + Air Quality API（霞光自建评分模型）</td><td class="srcs">2026-09-22</td></tr><tr><td>f7</td><td>威海 2026-10-01 逐时潮位（Open-Meteo Marine，00:00 起 1.69m 一路退到 06:00 的 -0.71m，07:00 回涨到 -0.60m），08:00 之后接口无数据</td><td>估算</td><td class="srcs">Open-Meteo Marine API（潮位）</td><td class="srcs">2026-09-22</td></tr></tbody></table><details><summary>数据来源清单（6 项，点击展开）</summary><div class="body srcs"><ul><li><code>s1</code> Sunrise-Sunset.org API（api，取数 2026-09-22） <a class="src-link" href="https://api.sunrise-sunset.org/json" target="_blank" rel="noopener noreferrer">https://api.sunrise-sunset.org/json</a></li><li><code>s2</code> Open-Meteo Marine API（潮位）（api，取数 2026-09-22） <a class="src-link" href="https://marine-api.open-meteo.com/v1/marine" target="_blank" rel="noopener noreferrer">https://marine-api.open-meteo.com/v1/marine</a></li><li><code>s3</code> CycleCalcs Astronomy API（api，取数 2026-09-22） <a class="src-link" href="https://www.cyclecalcs.com/v2/today" target="_blank" rel="noopener noreferrer">https://www.cyclecalcs.com/v2/today</a></li><li><code>s4</code> 网上公开资料整理（未用官方接口复核）（web_search，取数 2026-09-22）</li><li><code>s5</code> 中央气象台城市预报（人工查询）（web_search，取数 2026-09-22）</li><li><code>s6</code> Open-Meteo Forecast + Air Quality API（霞光自建评分模型）（api，取数 2026-09-22） <a class="src-link" href="https://api.open-meteo.com/v1/forecast" target="_blank" rel="noopener noreferrer">https://api.open-meteo.com/v1/forecast</a></li></ul><div class="legend">网址只作核对用，页面本身不联网加载。</div></div></details></section><footer>由 旅行规划总编排（travel-orchestrator）生成 · v3 · 离线单文件，可直接打印</footer></div><a class="totop" href="#top" aria-label="回到顶部">↑</a><div class="bling" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></body>
+</html>

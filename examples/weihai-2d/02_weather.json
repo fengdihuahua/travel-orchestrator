@@ -1,0 +1,20 @@
+{
+  "itinerary": {
+    "weather": {
+      "kind": "forecast",
+      "summary": "10 月初威海秋高气爽，昼夜温差大，夜温可到 10℃ 以下",
+      "entries": [
+        {
+          "date": "2026-10-01",
+          "summary": "☀️ 16-22℃ 东北风 3 级",
+          "source_id": "s5"
+        },
+        {
+          "date": "2026-10-02",
+          "summary": "🌤 15-21℃ 东北风 3-4 级",
+          "source_id": "s5"
+        }
+      ]
+    }
+  }
+}

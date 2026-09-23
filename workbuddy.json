@@ -1,0 +1,6 @@
+{
+  "display_name": "旅行规划总编排",
+  "display_name_en": "Travel Orchestrator",
+  "description_zh": "带红方复核的旅行规划：先把潮汐、日出、月落这些改不了的时刻锁死，再倒推整条动线。开场是逐层访谈而不是问卷，自然观察专项（观鸟 / 观星 / 日出 / 赶海）先做可行性核查再决定排不排，交付前由质疑方逐项挑刺，每个数字都能追到来源。产出同源的 Markdown 攻略与单文件离线 HTML 攻略页。",
+  "description_en": "Travel planning with an adversarial review pass: lock the moments that cannot move (tide, sunrise, moonset), then work the route backwards. Opens with a layered interview instead of a form, checks feasibility before scheduling any nature activity, and runs an adversarial pass before delivery. Every number traces back to a source. Ships a Markdown guide plus a single-file offline HTML page."
+}

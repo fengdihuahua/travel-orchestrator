@@ -1,0 +1,221 @@
+{
+  "itinerary": {
+    "nature": {
+      "birding": {
+        "species": [
+          {
+            "name": "黑嘴鸥",
+            "sci": "Saundersilarus saundersi",
+            "family": "鸥科 Laridae · 属 Saundersilarus",
+            "status": [
+              {
+                "rank": "VU",
+                "source": "IUCN Red List"
+              },
+              {
+                "rank": "CR",
+                "source": "Red List of Taiwan"
+              }
+            ],
+            "intro": "黑嘴鸥是鸥科黑嘴鸥属的鸟，栖息在河口水域与潮间带沼泽，因栖息地减少被 IUCN 列为易危（VU）。分布记录见于中国（含中国台湾、中国澳门）、日本、朝鲜、韩国、俄罗斯、越南等地。iNaturalist 上另有台湾地区红名录的 CR 评级，口径与 IUCN 不一致，以 IUCN 为准。",
+            "intro_source": "https://zh.wikipedia.org/zh-cn/黑嘴鸥",
+            "best_months": [
+              "01月",
+              "08月"
+            ],
+            "global_records": 1525,
+            "taxa_url": "https://www.inaturalist.org/taxa/144500"
+          },
+          {
+            "name": "蛎鹬",
+            "sci": "Haematopus ostralegus",
+            "family": "蛎鹬科 Haematopodidae · 属 Haematopus",
+            "status": [
+              {
+                "rank": "NT",
+                "source": "IUCN Red List"
+              }
+            ],
+            "intro": "蛎鹬（又名欧亚蛎鹬、蛎鸻）黑白羽色、喙长而直呈橙红色、眼红、腿暗粉，雌鸟喙略长于雄鸟。iNaturalist 上另收录了 10 条各国与地区红名录评级（LC 到 CR 不等），口径差异很大，本页只取 IUCN 一档。",
+            "intro_source": "https://zh.wikipedia.org/zh-cn/蛎鹬",
+            "global_records": null,
+            "taxa_url": "https://www.inaturalist.org/taxa/4843"
+          },
+          {
+            "name": "大天鹅",
+            "sci": "Cygnus cygnus",
+            "family": "鸭科 Anatidae · 属 Cygnus",
+            "status": [
+              {
+                "rank": "LC",
+                "source": "IUCN Red List"
+              }
+            ],
+            "intro": "大天鹅又名鹄、黄嘴天鹅，是鸭科天鹅属的鸟。本页只给物种身份与保护等级，「10 月能看到」属于未核实结论，见下方注意。",
+            "intro_source": "https://zh.wikipedia.org/zh-cn/大天鹅",
+            "taxa_url": "https://www.inaturalist.org/taxa/6916"
+          },
+          "白腰杓鹬"
+        ],
+        "best_time": "日出前后 2 小时（05:00-07:30）为鸣唱与觅食高峰；傍晚 16:00-18:30 次高峰",
+        "hotspots": [
+          {
+            "name": "荣成大天鹅国家级自然保护区开放观鸟点",
+            "note": "只走开放点"
+          },
+          {
+            "name": "桑沟湾滩涂",
+            "note": "低潮时水鸟集中"
+          }
+        ],
+        "notes": "10 月是候鸟南迁过境期，滩涂低潮时水鸟在裸露滩面集中觅食——赶海和观鸟可以同一时段同一地点完成。鸟类清单未经 eBird Token 复核，属未核实信息。"
+      },
+      "stargazing": {
+        "moon_phase": "10/1 约亏凸月 75%（9/22 实测 80.3%，需临近复查）",
+        "dark_window": "19:02 天文昏影终之后；无月时段在凌晨",
+        "planets": [
+          "金星（黄昏西方）",
+          "水星（黄昏西方）",
+          "木星（黎明前）",
+          "火星（黎明前东方）"
+        ],
+        "rating": "中等：月照偏强，适合月面与亮星团，深空目标建议另择月落后的日期",
+        "events": [
+          "9/26 满月",
+          "10/10 新月"
+        ],
+        "illumination_percent": 75,
+        "chart": {
+          "lat": 37.5091,
+          "lng": 122.1136,
+          "tz": 8,
+          "at": "2026-10-01T21:30",
+          "place": "威海"
+        },
+        "targets": [
+          {
+            "name": "月面与环形山",
+            "type": "月球",
+            "note": "月照约 75%，今晚最稳的目标"
+          },
+          {
+            "name": "仙后座 + 飞马座四边形",
+            "type": "星座",
+            "note": "星图里位于天顶附近，秋季认星从这里入手"
+          },
+          {
+            "name": "夏季大三角",
+            "type": "亮星",
+            "note": "星图里偏西，正在西沉，趁早看"
+          },
+          {
+            "name": "深空天体（星系、星云）",
+            "type": "深空",
+            "note": "月照 75% 下基本看不成，另择无月夜"
+          }
+        ],
+        "spots": [
+          {
+            "name": "荣成海边暗点",
+            "note": "无照明无信号，结伴去并告知同行人"
+          }
+        ]
+      },
+      "sunrise": {
+        "sunrise": "05:45",
+        "sunset": "17:37",
+        "golden_hour": "05:45-06:45（10/1）；05:46-06:46（10/2）",
+        "blue_hour": "05:20-05:45",
+        "best_spot": [
+          {
+            "name": "成山头",
+            "note": "朝东无遮挡"
+          },
+          {
+            "name": "荣成樱花湖东岸",
+            "note": "免费备选，同为朝东"
+          }
+        ]
+      },
+      "beachcombing": {
+        "tide_summary": "10/1 干潮 06:08（-0.71m，MSL 基准）；接口数据仅覆盖至 07:00，属部分数据",
+        "best_window": "04:38-07:38",
+        "tide_phase": "农历八月廿一前后，中潮（已过大潮期，滩涂露出幅度中等）",
+        "spots": [
+          {
+            "name": "桑沟湾滩涂",
+            "note": "沙泥混合，有蛤蜊与蛏子"
+          },
+          {
+            "name": "荣成礁石区",
+            "note": "见螺类"
+          }
+        ],
+        "safety": "07:38 前必须撤到岸上，涨潮从潮沟灌入，看着还浅其实已过膝。潮位为 MSL 基准，与官方潮汐表可能有系统偏差，出发前对照国家海洋信息中心数据复核。",
+        "unit": "m（MSL 基准）",
+        "source_id": "s2",
+        "curve": [
+          {
+            "t": "00:00",
+            "h": 1.69
+          },
+          {
+            "t": "01:00",
+            "h": 1.49
+          },
+          {
+            "t": "02:00",
+            "h": 1.08
+          },
+          {
+            "t": "03:00",
+            "h": 0.52
+          },
+          {
+            "t": "04:00",
+            "h": -0.07
+          },
+          {
+            "t": "05:00",
+            "h": -0.52
+          },
+          {
+            "t": "06:00",
+            "h": -0.71
+          },
+          {
+            "t": "07:00",
+            "h": -0.6
+          }
+        ],
+        "extremes": [
+          {
+            "type": "干潮",
+            "time": "06:08",
+            "height_m": -0.71
+          }
+        ]
+      },
+      "glow": {
+        "event": "日出（朝霞）",
+        "score": 2,
+        "level": "较好",
+        "reasons": [
+          "中高云 9%（偏少，云层不足以形成大范围霞光）",
+          "低云 9%（通透，阳光可达云底）",
+          "能见度 23km（空气通透）",
+          "相对湿度 53%（水汽适中）"
+        ],
+        "inputs": {
+          "cloud_cover_low_pct": 9.0,
+          "cloud_cover_mid_pct": 18.5,
+          "cloud_cover_high_pct": 0.0,
+          "visibility_km": 22.9,
+          "relative_humidity_pct": 53.0,
+          "aerosol_optical_depth": null
+        },
+        "source_id": "s6"
+      }
+    }
+  }
+}

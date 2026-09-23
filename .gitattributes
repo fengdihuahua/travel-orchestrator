@@ -1,0 +1,3 @@
+# 行尾统一为 LF：render_plan 渲染出的 MD/HTML 本来就是 LF，源码跟它对齐，
+# 免得改一处就整篇重排（补丁脚本也不用再猜每个文件的换行符）。
+* text=auto eol=lf
