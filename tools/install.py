@@ -36,10 +36,12 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 SKILL_NAME = "travel-orchestrator"
 
-# 这些是开发用的，不进安装目录
-EXCLUDE_DIRS = {"__pycache__", ".git", "tools", "docs", ".workbuddy"}
-EXCLUDE_FILES = {".gitignore", ".gitattributes", ".DS_Store"}
-EXCLUDE_SUFFIX = (".pyc", ".pyo", ".bak", ".tmp", ".out")
+# 排除清单**不在这里定义**，直接复用 pack.py 的那一份。
+# 理由：安装目录的用途就是"本地看到的东西与上架包里的一致"，两份清单各维护一份
+# 迟早会漂——上一版 pack 排除了 tools/ 而这里没排，装完目录里就多出 5 个开发脚本，
+# 而没人会去比对两个文件。想改口径就改 pack.py，这里跟着走。
+sys.path.insert(0, HERE)
+from pack import EXCLUDE_DIRS, EXCLUDE_FILES, EXCLUDE_SUFFIX  # noqa: E402
 
 
 def default_dest():

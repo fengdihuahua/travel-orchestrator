@@ -6,6 +6,7 @@
         "priority": "must",
         "status": "todo",
         "deadline": "9/28 前",
+        "booking": { "kind": "ticket", "keyword": "成山头景区门票" },
         "if_unresolved": "改在樱花湖东岸看日出，免费且朝东无遮挡"
       },
       {

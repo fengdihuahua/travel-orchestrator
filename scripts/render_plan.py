@@ -36,6 +36,7 @@ import argparse
 import hashlib
 import html
 import json
+import math
 import os
 import re
 import sys
@@ -44,7 +45,7 @@ from urllib.parse import quote
 
 import nature_widgets as nw  # 自然专项的交互件（星图/潮汐点选图等）
 
-VERSION = "3.4.0"
+VERSION = "3.8.0"
 ATTR_LINE = "由 旅行规划总编排（travel-orchestrator）生成"
 
 STATUS_LABEL = {
@@ -110,40 +111,50 @@ def load_trip(path: str) -> dict:
     return trip
 
 
-def structure_problems(trip: dict) -> list:
+def structure_problems(trip: dict, origin: dict | None = None) -> list:
     """渲染前的结构门。
 
     渲染器对坏数据太宽容：字段缺了只会渲染成空白，命令照样返回 0，
     现场看着像成功、交付出去才发现是废纸。所以先借 build_trip 的规则拦一道。
+
+    origin 是「字段 → 分片文件」映射（build_trip.load_parts 记录），传进来
+    报错就能直接说清改哪个文件，省掉在十几个分片里盲翻的那几轮。
     """
     try:
         import build_trip as bt
     except ImportError:
         return []
-    _ok, errors, _warns = bt.validate(trip, "trip.json", quiet=True)
+    _ok, errors, _warns = bt.validate(trip, "trip.json", quiet=True, origin=origin)
     return list(errors)
 
 
-def read_trip_source(path: str):
+def read_trip_source(path: str, with_origin: bool = False):
     """统一的取数入口：目录 → 就地合并 parts/；文件 → 读该文件。
 
     数据以分片为常态，所以这里不落中间大文件。
-    返回 (行程字典, 数据来源描述, 数据所在目录)。
+    with_origin=True 时额外返回「字段 → 分片文件」映射（四个返回值）。
     """
     p = os.path.abspath(path)
     try:
         import build_trip as bt
     except ImportError:
         bt = None
+    origin = {}
     if bt is not None:
-        trip, label, _n = bt.resolve_trip(p, quiet=True)
+        if with_origin:
+            trip, label, _n, origin = bt.resolve_trip(p, quiet=True, with_origin=True)
+        else:
+            trip, label, _n = bt.resolve_trip(p, quiet=True)
     elif os.path.isdir(p):
         raise TripDataError("找不到 build_trip.py，无法读取分片目录：" + p)
     else:
         trip, label = load_trip(p), os.path.basename(p)
     if not isinstance(trip, dict):
         raise ValueError("行程数据不是对象")
-    return trip, label, (p if os.path.isdir(p) else os.path.dirname(p))
+    src_dir = p if os.path.isdir(p) else os.path.dirname(p)
+    if with_origin:
+        return trip, label, src_dir, origin
+    return trip, label, src_dir
 
 
 def g(d, *keys, default=None):
@@ -158,6 +169,82 @@ def g(d, *keys, default=None):
     return cur
 
 
+def _dict(v):
+    """不是 dict 就返回 {}。
+
+    给 `request` / `itinerary` / `budget` 这类嵌套块用：写成字符串或数组时
+    `x.get(...)` 会直接 AttributeError，整份交付物崩掉。一个块写错，
+    最多少渲染一块，不该连累别的。
+    """
+    return v if isinstance(v, dict) else {}
+
+
+def _objs(v):
+    """把 `[{...}, ...]` 里不是对象的元素滤掉，只留 dict。
+
+    校验层（build_trip.validate）会拦住这类错误，但渲染器不能假设"上游一定校验过"：
+    直接 `x.get(...)` 会抛 AttributeError，用户看到的是 traceback 而不是
+    「哪个字段写错了」。这里统一挡一道：坏数据最多少显示一条，不会让整份交付物崩掉。
+    """
+    return [x for x in (v or []) if isinstance(x, dict)]
+
+
+def _geo(i):
+    """取条目的 `geo`，不是对象就当成没填（字符串/数组写法曾经直接把渲染器打崩）。"""
+    geo = i.get("geo")
+    return geo if isinstance(geo, dict) else {}
+
+
+def _tide_row(p):
+    """潮汐曲线上的一个点 → `(时刻原文, 潮位) | (None, None)`。
+
+    对象 `{t,h}` 和二元数组 `[time, h]` 两种写法都认；潮位统一过 nw.num，
+    免得 `float("nan")` 在表格里印出 "+nan m"。
+    """
+    if isinstance(p, dict):
+        tm = p.get("t") or p.get("time")
+        h = p.get("h")
+        if h is None:
+            h = p.get("height_m")
+    elif isinstance(p, (list, tuple)) and len(p) >= 2:
+        tm, h = p[0], p[1]
+    else:
+        return None, None
+    return tm, nw.num(h)
+
+
+def _as_items(v):
+    """把「列表 / 单个值」统一成列表。
+
+    字段本该是 `["a", "b"]` 却写成 `"a"` 是常见手滑：`"；".join("abc")`
+    会把一个词拆成三个字，不报错、静默出错。这里是统一收口。
+    """
+    if v in (None, ""):
+        return []
+    return list(v) if isinstance(v, (list, tuple)) else [v]
+
+
+def _texts(v):
+    """`_as_items` 再转成字符串并丢掉空值，专给 `"、".join(...)` 用。"""
+    return [str(x) for x in _as_items(v) if x not in (None, "")]
+
+
+def _labels(v, *keys):
+    """兴趣标签 → 字符串列表。元素是对象就取 `keys` 里第一个非空字段，是字符串就直接用。
+
+    容两件事：元素写成字符串（结构上不合规，但意思读得懂）、字段名写成别名。
+    以前直接 `x.get("label")`，元素是字符串就 AttributeError，一份交付物全崩。
+    """
+    out = []
+    for x in (v or []):
+        t = next((x.get(k) for k in keys if isinstance(x, dict) and x.get(k)), None) \
+            if isinstance(x, dict) else x
+        t = str(t or "").strip()
+        if t:
+            out.append(t)
+    return out
+
+
 def money(v, cur="CNY"):
     if isinstance(v, (int, float)) and not isinstance(v, bool):
         return f"{v:g} {cur}"
@@ -166,8 +253,8 @@ def money(v, cur="CNY"):
 
 # ====================================================================== Markdown
 def md_from_trip(trip: dict) -> str:
-    req = trip.get("request") or {}
-    it = trip.get("itinerary") or {}
+    req = _dict(trip.get("request"))
+    it = _dict(trip.get("itinerary"))
     ver = trip.get("plan_version", 1)
     status = trip.get("status", "draft")
     L = []
@@ -206,7 +293,7 @@ def md_from_trip(trip: dict) -> str:
     L.append("")
     origin = g(req, "origin", "name") or "未定"
     ds, de = g(req, "dates", "start") or "?", g(req, "dates", "end") or "?"
-    budget = req.get("budget") or {}
+    budget = _dict(req.get("budget"))
     L.append(f"| 项目 | 内容 |")
     L.append(f"|---|---|")
     L.append(f"| 出发地 | {origin} |")
@@ -215,9 +302,9 @@ def md_from_trip(trip: dict) -> str:
     L.append(f"| 预算 | {money(budget.get('amount_max'), budget.get('currency', 'CNY'))}"
              f"（{'总额' if budget.get('mode') == 'total' else '人均' if budget.get('mode') == 'per_person' else '口径未定'}） |")
     L.append(f"| 节奏 | {req.get('pace') or '未定'} |")
-    interests = req.get("interests") or {}
-    must = "、".join(i.get("label", "") for i in (interests.get("must") or []))
-    prefer = "、".join(interests.get("prefer") or [])
+    interests = _dict(req.get("interests"))
+    must = "、".join(_labels(interests.get("must"), "label", "name"))
+    prefer = "、".join(_labels(interests.get("prefer")))
     if must or prefer:
         L.append(f"| 专项偏好 | {_pref_text(must, prefer)} |")
     why = str(req.get("why") or "").strip()
@@ -229,11 +316,12 @@ def md_from_trip(trip: dict) -> str:
     L.append("")
 
     # ---- 天气研判
-    weather = it.get("weather") or {}
+    weather = it.get("weather") if isinstance(it.get("weather"), dict) else {}
     L.append("## 天气研判")
     L.append("")
-    if weather.get("kind") == "forecast" and weather.get("entries"):
-        for w in weather["entries"]:
+    wx_entries = _objs(weather.get("entries"))
+    if weather.get("kind") == "forecast" and wx_entries:
+        for w in wx_entries:
             src = f"（{w['source_id']}）" if w.get("source_id") else ""
             L.append(f"- {w.get('date', '')}：{w.get('summary', '')}{src}")
     else:
@@ -241,11 +329,11 @@ def md_from_trip(trip: dict) -> str:
     L.append("")
 
     # ---- 自然观察专项
-    nature = it.get("nature") or {}
+    nature = it.get("nature") if isinstance(it.get("nature"), dict) else {}
     if nature:
         L.append("## 自然观察专项")
         L.append("")
-        b = nature.get("birding") or {}
+        b = _sub(nature, "birding")
         if b:
             L.append("### 观鸟")
             L.append("")
@@ -285,7 +373,7 @@ def md_from_trip(trip: dict) -> str:
             if b.get("notes"):
                 L.append("- %s" % b["notes"])
             L.append("")
-        s = nature.get("stargazing") or {}
+        s = _sub(nature, "stargazing")
         if s:
             L.append("### 观星")
             L.append("")
@@ -294,28 +382,30 @@ def md_from_trip(trip: dict) -> str:
             if s.get("dark_window"):
                 L.append("- 暗夜窗口：%s" % s["dark_window"])
             if s.get("planets"):
-                L.append("- 可见行星：%s" % "、".join(
-                    p.get("name") if isinstance(p, dict) else str(p) for p in s["planets"]))
+                pl = [str(p.get("name") or "") if isinstance(p, dict) else str(p)
+                      for p in _as_items(s["planets"])]
+                L.append("- 可见行星：%s" % ("、".join(x for x in pl if x) or "—"))
             if s.get("rating"):
                 L.append("- 观星条件：%s" % s["rating"])
             if s.get("events"):
-                L.append("- 近期天文事件：%s" % "；".join(s["events"]))
-            for t in (s.get("targets") or []):
+                L.append("- 近期天文事件：%s" % "；".join(_texts(s["events"])))
+            for t in _objs(s.get("targets")):
                 if isinstance(t, dict):
                     L.append("- 目标：%s%s%s" % (
                         t.get("name", ""),
                         "（%s）" % t["type"] if t.get("type") else "",
                         " —— %s" % (t.get("note") or t.get("how")) if (t.get("note") or t.get("how")) else ""))
-            cfg = s.get("chart") or {}
+            cfg = s.get("chart") if isinstance(s.get("chart"), dict) else {}
             if cfg:
                 L.append("- 星图：%s 内嵌示意星图（按 %.2f°N %.2f°E、%s 当地时刻算地平坐标，"
                          "只画地平线以上的亮星；未做大气折射与光污染修正）。"
                          "精确星图见 [Stellarium Web](https://stellarium-web.org/)。"
                          % (_md_places(s.get("spots")) if s.get("spots") else "见攻略页",
-                            cfg.get("lat") or 0, cfg.get("lng") or 0, cfg.get("at") or ""))
+                            nw.num(cfg.get("lat")) or 0.0, nw.num(cfg.get("lng")) or 0.0,
+                            cfg.get("at") or ""))
             L.append("")
-        r = nature.get("sunrise") or {}
-        gl = nature.get("glow") or {}
+        r = _sub(nature, "sunrise")
+        gl = _sub(nature, "glow")
         if r:
             L.append("### 日出日落")
             L.append("")
@@ -331,7 +421,7 @@ def md_from_trip(trip: dict) -> str:
             if gl.get("score") is not None:
                 L.append("- 霞光（火烧云）指数：%s/3 %s"
                          % (gl.get("score"), gl.get("level") or ""))
-                L.append("  - 估算依据：%s" % "；".join(gl.get("reasons") or []))
+                L.append("  - 估算依据：%s" % "；".join(_texts(gl.get("reasons"))))
                 L.append("  - 这是按云量分层、通透度、水汽算出的参考值，不是官方预报。")
             L.append("")
         elif gl:
@@ -341,7 +431,7 @@ def md_from_trip(trip: dict) -> str:
                 L.append("- 预报：%s" % gl["rating"])
             L.append("- 说明：这是按云量、通透度、水汽、气溶胶算出的参考值，不是官方预报。")
             L.append("")
-        t = nature.get("beachcombing") or {}
+        t = _sub(nature, "beachcombing")
         if t:
             L.append("### 赶海")
             L.append("")
@@ -355,34 +445,34 @@ def md_from_trip(trip: dict) -> str:
                 L.append("- 地点：%s" % _md_places(t["spots"]))
             if t.get("safety"):
                 L.append("- ⚠️ %s" % t["safety"])
-            curve = t.get("curve") or []
+            curve = t.get("curve") if isinstance(t.get("curve"), list) else []
             if len(curve) >= 3:
                 L.append("- 逐时潮位（%s，点选看每小时能不能下滩见攻略页）：" % (t.get("unit") or "潮位"))
                 L.append("")
                 L.append("| 时刻 | 潮位 |")
                 L.append("|---|---|")
                 for p in curve:
-                    if isinstance(p, dict):
-                        tm, h = p.get("t") or p.get("time"), p.get("h")
-                        if h is None:
-                            h = p.get("height_m")
-                    else:
-                        tm, h = p[0], p[1]
+                    tm, h = _tide_row(p)
                     if h is None:
                         continue
-                    L.append("| %s | %+.2f m |" % (str(tm)[-5:], float(h)))
-                for e_ in (t.get("extremes") or []):
-                    if isinstance(e_, dict) and e_.get("type"):
+                    L.append("| %s | %+.2f m |" % (str(tm)[-5:], h))
+                for e_ in _objs(t.get("extremes")):
+                    if e_.get("type"):
+                        h = nw.num(e_.get("height_m"))
+                        if h is None:
+                            h = nw.num(e_.get("h"))
+                        if h is None:
+                            continue
                         L.append("| %s | %+.2f m（%s） |"
-                                 % (str(e_.get("time"))[-5:], float(e_.get("height_m") or 0),
-                                    e_["type"]))
+                                 % (str(e_.get("time"))[-5:], h, e_["type"]))
                 L.append("")
             L.append("")
 
     # ---- 逐日行程
     L.append("## 逐日行程")
     L.append("")
-    for d in it.get("days") or []:
+    L.extend(_md_route(it))
+    for d in _objs(it.get("days")):
         head = f"### {d.get('day_id', '')} · {d.get('date', '')}"
         if d.get("weekday"):
             head += f"（{d['weekday']}）"
@@ -390,7 +480,9 @@ def md_from_trip(trip: dict) -> str:
             head += f" — {d['title']}"
         L.append(head)
         L.append("")
-        for i in d.get("items") or []:
+        for i in _objs(d.get("items")):
+            if _blank_item(i):
+                continue
             kind = KIND_LABEL.get(i.get("kind"), "")
             tag = f"`{kind}` " if kind else ""
             place = f" @ [{i['place']}]({_map_url(i['place'])})" if i.get("place") else ""
@@ -401,25 +493,31 @@ def md_from_trip(trip: dict) -> str:
             L.append(f"- **{i.get('time') or ''}** {tag}{i.get('title', '')}{place}{st_txt}")
             if i.get("notes"):
                 L.append(f"  - {i['notes']}")
-        for a in d.get("alternatives") or []:
+        for a in _objs(d.get("alternatives")):
             L.append(f"- *备选*：{a.get('title', '')}｜触发条件：{a.get('trigger', '未写')}")
         L.append("")
 
     # ---- 美食推荐
-    food = it.get("food") or []
+    food = _objs(it.get("food"))
     if food:
         L.append("## 美食推荐")
         L.append("")
         L.append("| 店/摊 | 人均 | 为什么去 | 备注 |")
         L.append("|---|---|---|---|")
         for f_ in food:
-            L.append(f"| {f_.get('name', '')} | {f_.get('price', '未查到')} | "
+            nm = str(f_.get("name", ""))
+            kw = f_.get("search") or nm
+            bks = nw.booking_links(kw, f_.get("booking_kind") or "food")
+            cell = nm + ("（" + " / ".join(f"[{t}]({u})" for t, u in bks) + "）" if bks else "")
+            L.append(f"| {cell} | {f_.get('price', '未查到')} | "
                      f"{f_.get('why', '')} | {f_.get('note', '') or '—'} |")
+        L.append("")
+        L.append("> 人均是平台实时价，会变；点平台入口看当天报价，本方案不写死价格。")
         L.append("")
 
     # ---- 预算明细
-    budget_it = it.get("budget") or {}
-    cats = budget_it.get("categories") or []
+    budget_it = it.get("budget") if isinstance(it.get("budget"), dict) else {}
+    cats = _objs(budget_it.get("categories"))
     if cats:
         cur = budget_it.get("currency", "CNY")
         L.append("## 预算明细")
@@ -428,8 +526,9 @@ def md_from_trip(trip: dict) -> str:
         L.append("|---|---|")
         lo_sum = hi_sum = 0.0
         for c in cats:
-            lo, hi = c.get("min"), c.get("max")
-            if isinstance(lo, (int, float)) and isinstance(hi, (int, float)):
+            # 走 nw.num：nan / inf / 布尔 / "80 元" 这类值都不该进算术与表格
+            lo, hi = nw.num(c.get("min")), nw.num(c.get("max"))
+            if lo is not None and hi is not None:
                 lo_sum += lo
                 hi_sum += hi
                 L.append(f"| {c.get('name', '')} | {lo:g} – {hi:g} |")
@@ -437,15 +536,15 @@ def md_from_trip(trip: dict) -> str:
                 L.append(f"| {c.get('name', '')} | 未查到 |")
         if lo_sum or hi_sum:
             L.append(f"| **合计** | **{lo_sum:g} – {hi_sum:g}** |")
-        cap = g(req, "budget", "amount_max")
-        if isinstance(cap, (int, float)) and hi_sum > cap:
+        cap = nw.num(g(req, "budget", "amount_max"))
+        if cap is not None and hi_sum > cap:
             L.append("")
             L.append(f"> 注意：分项上限合计 {hi_sum:g}，比预算 {cap:g} 高出 {hi_sum - cap:g}。"
                      "要么压住宿和餐饮，要么把预算上调。")
         L.append("")
 
     # ---- 待办
-    checklist = it.get("checklist") or []
+    checklist = _objs(it.get("checklist"))
     if checklist:
         L.append("## 出发前待办")
         L.append("")
@@ -459,7 +558,7 @@ def md_from_trip(trip: dict) -> str:
         L.append("")
 
     # ---- 踩坑指南
-    pitfalls = trip.get("pitfalls") or []
+    pitfalls = _objs(trip.get("pitfalls"))
     if pitfalls:
         L.append("## 踩坑指南")
         L.append("")
@@ -477,8 +576,8 @@ def md_from_trip(trip: dict) -> str:
     # 复核后仍未解决、且用户需要知道的风险，应改写进上面的「踩坑指南」。
 
     # ---- 依据索引
-    facts = trip.get("facts") or []
-    sources = trip.get("sources") or []
+    facts = _objs(trip.get("facts"))
+    sources = _objs(trip.get("sources"))
     if facts or sources:
         L.append("## 依据索引")
         L.append("")
@@ -547,9 +646,61 @@ h3{font-size:16.5px;margin:24px 0 8px;font-weight:800}
 .card{background:var(--surface);border:1.5px solid var(--stroke);border-radius:16px;
 padding:16px 18px;margin:12px 0;box-shadow:3px 3px 0 var(--bb-blue-soft)}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:11px}
+.grid.g-glance{grid-template-columns:repeat(4,minmax(0,1fr))}
+.grid.g-glance .cell.half{grid-column:span 2}
+.grid.g-glance .cell.wide{grid-column:1/-1}
 .grid .cell{background:var(--surface);border:1.5px solid var(--stroke);border-radius:14px;
 padding:12px 14px;box-shadow:2px 2px 0 var(--bb-blue-soft)}
 .grid .cell b{display:block;font-size:11.5px;color:var(--ink-3)}
+.grid .cell span{font-size:15px;font-weight:700;overflow-wrap:break-word;
+word-break:normal;line-break:strict}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-style:normal;display:inline-block;padding:2px 10px;border-radius:999px;
+font-size:12.5px;font-weight:700;color:var(--ink-2);background:#f7f4fa;
+border:1px solid var(--stroke-2)}
+.bks{display:inline-flex;flex-wrap:wrap;gap:5px;margin-left:8px;vertical-align:middle}
+.bk{display:inline-block;font-size:11.5px;font-weight:800;padding:1px 9px;border-radius:999px;
+color:var(--bb-pink-deep);background:#fff5f9;border:1px solid var(--bb-pink-soft);
+text-decoration:none;white-space:nowrap}
+.bk::before{content:'↗';margin-right:3px;font-size:10px}
+.exlog{margin-top:7px;font-size:12px;color:var(--ink-3)}
+@media (max-width:820px){.grid.g-glance{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:480px){
+  .grid.g-glance{grid-template-columns:1fr}
+  .grid.g-glance .cell.half{grid-column:1/-1}
+  .grid{gap:9px}
+  .grid .cell{padding:11px 13px}
+  .grid .cell span{font-size:14px}
+}
+.route{background:var(--surface);border:1.5px solid var(--stroke);border-radius:16px;
+padding:13px 15px;margin:0 0 14px;box-shadow:3px 3px 0 var(--bb-blue-soft)}
+.route .rhead{font-weight:900;font-size:14px;color:var(--ink-2);margin-bottom:7px}
+.route .rhead .rsub{font-size:12px;font-weight:600;color:var(--ink-3)}
+.rmap{margin:2px 0 9px;border:1.5px dashed var(--stroke-2);border-radius:12px;
+background:#faf9fd;padding:6px 8px 4px}
+.rmap svg{display:block;width:100%;height:auto;max-height:270px}
+.rgrid line{stroke:#ece7f2;stroke-width:1}
+.rpath{fill:none;stroke:var(--bb-blue);stroke-width:2;stroke-dasharray:6 5;opacity:.75}
+.rmap circle{stroke:#fff;stroke-width:2;paint-order:stroke}
+.rmapcap{margin-top:2px;font-size:11.5px;color:var(--ink-3);text-align:center}
+.rline{display:flex;gap:9px;align-items:flex-start;padding:5px 0;flex-wrap:wrap}
+.rline>b{flex:0 0 auto;font-size:12.5px;font-weight:900;color:#fff;background:var(--bb-pink);
+padding:2px 10px;border-radius:999px}
+.rstops{display:flex;flex-wrap:wrap;align-items:center;gap:5px;min-width:0}
+.rnode{display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;
+color:var(--ink);text-decoration:none;background:#f7f4fa;border:1.5px solid var(--stroke);
+border-radius:999px;padding:2px 11px 2px 4px}
+.rnode i{font-style:normal;font-size:11px;font-weight:900;color:#fff;background:var(--bb-blue);
+width:17px;height:17px;border-radius:50%;display:grid;place-items:center}
+.rarrow{color:var(--bb-pink);font-weight:900}
+.rfoot{margin-top:7px;font-size:12px;color:var(--ink-3);display:flex;flex-wrap:wrap;
+gap:9px;align-items:center}
+.rfoot a{color:var(--bb-blue-deep);font-weight:800;text-decoration:none}
+.rfoot .rbtn{display:inline-flex;align-items:center;background:var(--bb-blue);color:#fff;
+border:1.5px solid var(--bb-blue);border-radius:999px;padding:3px 13px;font-size:12.5px}
+.rfoot .rbtn.ghost{background:#fff;color:var(--bb-pink-deep);border-color:var(--bb-pink)}
+.rfoot>span{flex:1 1 100%;line-height:1.6}
+@media (max-width:480px){.rmap svg{max-height:200px}}
 .hl{font-weight:800}
 .tl{position:relative;padding-left:26px;border-left:2px dashed rgba(0,161,214,.4)}
 .slot{position:relative;margin:0 0 8px;padding:8px 11px;border-radius:13px}
@@ -599,14 +750,15 @@ gap:11px 22px;margin:0}
 .scene-star{background:#333c74}.scene-sea{background:#4dbde4}.scene-bird{background:#a8e0d2}
 .scene-sun{background:#ffc98f}.scene-glow{background:#ffb0a8}
 .star,.wave,.bird,.reeds,.sun,.ray,.cloudbar,.glowband,.seashell,.moonp,.star-halo{display:none}
-.todo{display:flex;gap:11px;align-items:flex-start;padding:9px 11px;border-radius:13px;
-cursor:pointer}
-.todo input{width:19px;height:19px;margin:3px 0 0;border:1.8px solid var(--stroke-2);
-border-radius:6px;-webkit-appearance:none;appearance:none;background:#fff}
-.todo input:checked{background:var(--bb-blue);border-color:var(--bb-blue)}
+.todo{display:flex;gap:11px;align-items:flex-start;padding:9px 11px;border-radius:13px}
+.todo .mark{width:19px;height:19px;margin:3px 0 0;border:1.8px solid var(--stroke-2);
+border-radius:6px;display:grid;place-items:center;font-size:12px;font-weight:900;color:#fff}
+.todo.is-done .mark{background:var(--bb-blue);border-color:var(--bb-blue)}
 .todo .ti{font-weight:800}
-.todo input:checked ~ .txt .ti{color:var(--ink-3);text-decoration:line-through}
+.todo.is-done .ti{color:var(--ink-3);text-decoration:line-through}
 .todo .nt{color:var(--ink-2);font-size:13px;margin-top:3px}
+.todo-sum{font-size:12.5px;font-weight:800;color:var(--ink-2);padding:2px 11px 10px;
+border-bottom:1.5px dashed var(--stroke);margin-bottom:6px}
 table{width:100%;border-collapse:separate;border-spacing:0;font-size:14px}
 th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--stroke)}
 th{font-size:12.5px;background:#fbf7fd}
@@ -684,12 +836,12 @@ def _danmaku(trip):
 
     纯装饰，但只放真实数据 —— 拿不到就不飘这一条，不编。
     """
-    req = trip.get("request") or {}
-    it = trip.get("itinerary") or {}
+    req = _dict(trip.get("request"))
+    it = _dict(trip.get("itinerary"))
     nat = it.get("nature") or {}
     pills = []
-    dest = (req.get("destination") or {}).get("name") or trip.get("title") or ""
-    org = (req.get("origin") or {}).get("name") or ""
+    dest = g(req, "destination", "name") or trip.get("title") or ""
+    org = g(req, "origin", "name") or ""
     if dest and org:
         pills.append(org + " → " + dest)
     elif dest:
@@ -719,19 +871,17 @@ def _danmaku(trip):
 
 
 def _cover(trip):
-    req = trip.get("request") or {}
+    req = _dict(trip.get("request"))
     status = trip.get("status", "draft")
     ds = g(req, "dates", "start") or "?"
     de = g(req, "dates", "end") or "?"
     days = len(g(trip, "itinerary", "days", default=[]) or [])
-    chips = [f"{ds} → {de}", f"{days} 天", req.get("companions") or "同行未定",
-             origin_txt(req)] 
-    nature = g(trip, "itinerary", "nature", default={}) or {}
-    for key, label in (("birding", "观鸟"), ("stargazing", "观星"),
-                       ("sunrise", "日出"), ("beachcombing", "赶海"), ("glow", "朝晚霞")):
-        if nature.get(key):
-            chips.append(label)
-    chips_html = "".join(f"<span>{e(c)}</span>" for c in chips if c)
+    # 封面只放"定位信息"：日期、天数、往返、同行。
+    # 专项标签曾经也贴在这里，但速览的「专项偏好」与下面的专项节都会再说一遍 ——
+    # 一个事实只在页面上有一个家，重复就是噪音（尤其手机上，chips 一多就换两行）。
+    chips = [f"{ds} → {de}", f"{days} 天", _route_text(req, trip),
+             req.get("companions") or "同行未定"]
+    chips_html = "".join(f"<span>{e(c)}</span>" for c in chips if c and c != "未定")
     note = f'<div class="note">{e(trip["status_note"])}</div>' if trip.get("status_note") else ""
     return (
         f'<header class="cover">{COVER_SPARKS}{COVER_STICKERS}'
@@ -746,14 +896,14 @@ def _cover(trip):
 
 
 def origin_txt(req):
-    o = (req.get("origin") or {}).get("name")
+    o = g(req, "origin", "name")
     return f"从{o}出发" if o else ""
 
 
 def _route_text(req, trip):
     """往返合成一格：目的地和出发地都是只有地名的短值，分开占两格会把网格排歪。"""
-    dest = (req.get("destination") or {}).get("name") or trip.get("title") or ""
-    org = (req.get("origin") or {}).get("name") or ""
+    dest = g(req, "destination", "name") or trip.get("title") or ""
+    org = g(req, "origin", "name") or ""
     if org and dest:
         return f"{org} → {dest}"
     return dest or org or "未定"
@@ -774,54 +924,60 @@ def _pref_text(must, prefer):
 
 
 def _glance(trip):
-    """速览：固定 4 列的网格（`.g-glance`），每个格子用 span 拼，行行填满。
+    """速览：固定 4 列的网格（`.g-glance`），每格按 span 拼，行行填满。
 
-    排法：
-      主题（长句）        整行
-      往返/同行/预算/节奏  各一列，正好一行
-      专项偏好 + 硬约束    各两列并排（只剩一条时整行，旁边不空）
-    窄屏由 CSS 降到 2 列 / 1 列，三档都整齐。
+    分工（一个事实在页面上只有一个家，重复就是噪音）：
+      封面管定位：日期 / 天数 / 往返 / 同行
+      这里管决策：主题（有则整行）→ 预算 / 节奏 / 专项偏好（合成一行）→ 硬约束（整行）
+    宽度按格数动态分配（三格 1+1+2、两格 2+2、一格整行），所以哪几项有值
+    都不会留下空格子；窄屏由 CSS 降到 2 列 / 1 列。
     """
-    req = trip.get("request") or {}
-    b = req.get("budget") or {}
+    req = _dict(trip.get("request"))
+    b = _dict(req.get("budget"))
     mode = {"total": "总额", "per_person": "人均"}.get(b.get("mode"), "口径未定")
-    interests = req.get("interests") or {}
-    must = "、".join(x.get("label", "") for x in (interests.get("must") or []))
-    prefer = "、".join(interests.get("prefer") or [])
+    interests = _dict(req.get("interests"))
+    must = "、".join(_labels(interests.get("must"), "label", "name"))
+    prefer = "、".join(_labels(interests.get("prefer")))
 
-    head = []
+    cells = []
     why = str(req.get("why") or "").strip()
     if why:
-        head.append(("这趟的主题", why, "wide"))
+        cells.append(("这趟的主题", e(why), "wide"))
 
-    cells = [
-        ("往返", _route_text(req, trip), ""),
-        ("同行", req.get("companions") or "未定", ""),
-        ("预算", f"{money(b.get('amount_max'), b.get('currency', 'CNY'))}（{mode}）", ""),
-        ("节奏", req.get("pace") or "未定", ""),
-    ]
+    mid = [("预算", f"{money(b.get('amount_max'), b.get('currency', 'CNY'))}（{mode}）")]
+    pace = str(req.get("pace") or "").strip()
+    if pace:
+        mid.append(("节奏", pace))
+    pref = _pref_text(must, prefer)
+    if pref != "未定":
+        mid.append(("专项偏好", pref))
+    span_of = {1: "", 2: "half", 4: "wide"}
+    widths = {3: [1, 1, 2], 2: [2, 2], 1: [4]}[len(mid)]
+    cells.extend((k, e(v), span_of[w]) for (k, v), w in zip(mid, widths))
 
-    tail = [("专项偏好", _pref_text(must, prefer))]
+    # 硬约束拆成一串小胶囊：手机上不再是一条读不完的分号长句
     cons = [str(c).strip() for c in (req.get("constraints") or []) if str(c).strip()]
     if cons:
-        tail.append(("硬约束", "；".join(cons)))
-    span = "half" if len(tail) == 2 else "wide"
-    tail = [(k, v, span) for k, v in tail]
+        chips = "".join(f'<i class="chip">{e(c)}</i>' for c in cons)
+        cells.append(("硬约束", f'<span class="chips">{chips}</span>', "wide"))
 
+    if not cells:
+        return ""
     inner = "".join(
         f'<div class="cell{(" " + sp) if sp else ""}"><b>{e(k)}</b>'
-        f"<span>{e(v)}</span></div>" for k, v, sp in head + cells + tail)
+        f"<span>{v}</span></div>" for k, v, sp in cells)
     return h2("glance", "一页速览") + f'<div class="grid g-glance">{inner}</div>'
 
 
 def _weather(it):
-    w = it.get("weather") or {}
+    w = it.get("weather") if isinstance(it.get("weather"), dict) else {}
     if not w:
         return ""
     out = [h2("weather", "天气研判")]
-    if w.get("kind") == "forecast" and w.get("entries"):
+    entries = _objs(w.get("entries"))
+    if w.get("kind") == "forecast" and entries:
         cells = []
-        for x in w["entries"]:
+        for x in entries:
             src = f'<b style="display:block;font-size:12px;color:var(--ink-3)">{e(x.get("source_id", ""))}</b>' if x.get("source_id") else ""
             cells.append(f'<div class="cell"><b>{e(x.get("date", ""))}</b>'
                          f'<span>{e(x.get("summary", ""))}</span>{src}</div>')
@@ -872,6 +1028,16 @@ def _scene(theme, label):
             f'<span class="label">{e(label)}</span></div>')
 
 
+def _sub(d, key):
+    """取 `nature` 下的一个子块，不是对象就当没填（返回 {}）。
+
+    四个专项历史上都写成 `n.get(k) or {}`，数据里把某个专项写成字符串/数组时
+    会直接 AttributeError 崩掉整份交付物——一个专项写错不该拖垮另外三个。
+    """
+    v = d.get(key)
+    return v if isinstance(v, dict) else {}
+
+
 def _md_places(value):
     """地点字段 → Markdown 链接串。列表、字符串两种写法都认。"""
     if not value:
@@ -894,12 +1060,12 @@ def _md_places(value):
 def _nature(it):
     """自然观察专项：四项数据一行一张全宽卡。
     卡里除了要点，还挂上能点的东西——鸟种卡、星图、天光条 + 霞光指数、潮汐点选图。"""
-    n = it.get("nature") or {}
+    n = it.get("nature") if isinstance(it.get("nature"), dict) else {}
     if not n:
         return ""
     cards = []
 
-    b = n.get("birding") or {}
+    b = _sub(n, "birding")
     if b:
         rows = []
         if b.get("hotspots"):
@@ -910,7 +1076,7 @@ def _nature(it):
         cards.append(_nature_card("观鸟", rows, "birding",
                                   extra=nw.species_list(b.get("species")), extra_first=True))
 
-    s = n.get("stargazing") or {}
+    s = _sub(n, "stargazing")
     if s:
         rows = []
         if s.get("moon_phase"):
@@ -918,18 +1084,20 @@ def _nature(it):
         if s.get("dark_window"):
             rows.append(("暗夜窗口", s["dark_window"]))
         if s.get("planets"):
-            rows.append(("可见行星", "、".join(
-                p.get("name") if isinstance(p, dict) else str(p) for p in s["planets"])))
+            pl = [str(p.get("name") or "") if isinstance(p, dict) else str(p)
+                  for p in _as_items(s["planets"])]
+            pl = [x for x in pl if x]
+            rows.append(("可见行星", "、".join(pl) if pl else "—"))
         if s.get("rating"):
             rows.append(("观星条件", s["rating"]))
         if s.get("events"):
-            rows.append(("天文事件", "；".join(s["events"])))
+            rows.append(("天文事件", "；".join(_texts(s["events"]))))
         if s.get("spots"):
             rows.append(("观测点", nw.place_links(s["spots"]), True, True))
         cards.append(_nature_card("观星", rows, "stargazing", extra=nw.star_section(s)))
 
-    r = n.get("sunrise") or {}
-    gl = n.get("glow") or {}
+    r = _sub(n, "sunrise")
+    gl = _sub(n, "glow")
     if r:
         rows = []
         if r.get("sunrise") or r.get("sunset"):
@@ -950,7 +1118,7 @@ def _nature(it):
             rows.append(("预报", gl["rating"]))
         cards.append(_nature_card("朝晚霞", rows, "glow", extra=nw.glow_meter(gl)))
 
-    t = n.get("beachcombing") or {}
+    t = _sub(n, "beachcombing")
     if t:
         rows = []
         if t.get("tide_summary"):
@@ -1022,11 +1190,198 @@ def _maplink(place):
     return nw.map_link(place)
 
 
+def _blank_item(i):
+    """字段名对不上（或整条为空）的条目不该渲染成一个空白行。
+
+    生成侧最容易出的问题是字段名写错：条目里一个字段都认不出来时，
+    旧渲染器照样输出一个空 slot，页面上就是"无缘无故的空白行"。
+    这里统一判空，宁可少一行，也不要留一行空白让读者以为页面坏了。
+    """
+    return not any(str(i.get(k) or "").strip()
+                   for k in ("title", "time", "place", "notes", "kind"))
+
+
+ROUTE_COLORS = ("#fb7299", "#00a1d6", "#b48cf2", "#2bd6b5", "#ffb01a", "#ff9f7a")
+
+
+def _spread(xy, radius=16.0):
+    """完全重合的点（早上和晚上都在同一个镇）会叠成一坨，序号糊在一起。
+
+    把重合的一组在一个小圆上摊开：偏移量按 16px 算，换算到地图上是几十到几百米，
+    在一个街区量级，示意图上完全可以接受——总比两个数字叠着看不清强。
+    """
+    groups = {}
+    for k, (x, y) in enumerate(xy):
+        groups.setdefault((round(x, 1), round(y, 1)), []).append(k)
+    out = list(xy)
+    for (cx, cy), idxs in groups.items():
+        if len(idxs) < 2:
+            continue
+        for pos, k in enumerate(idxs):
+            ang = 2 * math.pi * pos / len(idxs) - math.pi / 2
+            out[k] = (cx + radius * math.cos(ang), cy + radius * math.sin(ang))
+    return out
+
+
+def _routemap(pts, total=None):
+    """内联 SVG 动线示意图：把带坐标的停靠点按顺序连起来（离线，不联网）。
+
+    离线单文件放不了真地图（瓦片要联网、要 Key），所以这里画的是**相对方位
+    正确、比例不作数**的示意图：谁在东边、谁在西边、顺序怎么走，一眼能看出来。
+
+    `pts` 每项是 (lng, lat, name, day_no, seq)：`seq` 是**全局停靠点序号**，
+    也就是下方逐日列表里的标号——两边必须一致，读者才能对着图找行。
+    没坐标的点不画，序号就会留缺口，末尾用一句话说明，别让人以为漏了。
+    """
+    if len(pts) < 2:
+        return ""
+    W, H = 640, 300
+    proj = nw.project_points([(p[0], p[1], p[2]) for p in pts], W, H)
+    if len(proj) < 2:
+        return ""
+    xy = _spread([(p[0], p[1]) for p in proj])
+    path = " ".join("%.1f,%.1f" % (p[0], p[1]) for p in xy)
+    grid = "".join('<line x1="%d" y1="0" x2="%d" y2="%d"/>' % (x, x, H)
+                   for x in range(80, W, 80))
+    grid += "".join('<line x1="0" y1="%d" x2="%d" y2="%d"/>' % (y, W, y)
+                    for y in range(60, H, 60))
+    nodes = []
+    for (x, y), p in zip(xy, pts):
+        name, n = p[2], p[4]
+        c = ROUTE_COLORS[(p[3] - 1) % len(ROUTE_COLORS)]
+        nodes.append(
+            '<g><title>' + e("%d. %s" % (n, name))
+            + '</title><circle cx="%.1f" cy="%.1f" r="11" fill="%s"/>' % (x, y, c)
+            + '<text x="%.1f" y="%.1f" text-anchor="middle" dominant-baseline="central" '
+              'font-size="11" font-weight="700" fill="#ffffff">%d</text></g>' % (x, y, n)
+        )
+    cap = "位置示意（非等比）：标号＝下方停靠点序号，颜色按天区分"
+    if total and total > len(pts):
+        cap += "；另有 %d 个点未录坐标，图中不显示" % (total - len(pts))
+    return (
+        '<div class="rmap"><svg viewBox="0 0 %d %d" role="img" '
+        'aria-label="行程动线示意图" preserveAspectRatio="xMidYMid meet">' % (W, H)
+        + '<g class="rgrid">' + grid + '</g>'
+        + '<polyline class="rpath" points="' + path + '"/>'
+        + "".join(nodes)
+        + '</svg><div class="rmapcap">' + e(cap) + '</div></div>'
+    )
+
+
+def _stops(it):
+    """全行程的停靠点 + 全局序号 —— 编号规则的**唯一**实现。
+
+    同一天里同名地点只算一次，跨天连续编号。HTML 的动线图、MD 的动线清单、
+    逐日列表都读这一份结果，才不会出现「图上第 5 个点」和「MD 第 5 条」指两处。
+    以前这条规则在 _flow / _md_route 里各写一遍，改一处忘一处就悄悄错位。
+
+    返回 (rows, total)：rows 是 [(day_id, [(name, seq, lat, lng), ...]), ...]，
+    只保留有停靠点的天；total 是最大的那个全局序号。
+    """
+    rows, seq = [], 0
+    for idx, d in enumerate(_objs(it.get("days")), 1):
+        did = d.get("day_id") or "D" + str(idx)
+        stops = []
+        for i in _objs(d.get("items")):
+            if _blank_item(i) or not i.get("place"):
+                continue
+            name = str(i["place"]).strip()
+            if not name or any(name == s[0] for s in stops):
+                continue
+            geo = _geo(i)
+            seq += 1
+            stops.append((name, seq, nw.num(geo.get("lat")), nw.num(geo.get("lng"))))
+        if stops:
+            rows.append((did, stops))
+    return rows, seq
+
+
+def _md_route(it):
+    """Markdown 版动线一览：全局编号的停靠点清单 + 两个跳外部地图的链接。
+
+    编号来自 _stops()，与 HTML 版共用同一份结果，所以「HTML 上看第 5 个点」
+    和「MD 里第 5 条」指的是同一个地方。
+    MD 画不了 SVG，要看图请开 HTML 版——HTML 是主交付物。
+    """
+    rows, _total = _stops(it)
+    if not rows:
+        return []
+    lines, pts = [], []
+    for did, stops in rows:
+        for name, n, lat, lng in stops:
+            if lat is not None and lng is not None:
+                pts.append((lng, lat, name))
+            lines.append(f"{n}. [{name}]({_map_url(name)})（{did}）")
+    out = ["**动线一览**（按行程顺序；编号与下方逐日停靠点一致）", ""]
+    out.extend(lines)
+    links = [x for x in (f"[在高德看全部点位]({nw.markers_url(pts)})" if pts else "",
+                         f"[规划整条路线]({nw.route_url(pts)})" if len(pts) >= 2 else "") if x]
+    if links:
+        out += ["", " · ".join(links)]
+    out.append("")
+    return out
+
+
+def _flow(it):
+    """行程动线：一张路线示意图 + 逐日停靠点 + 跳外部地图的按钮。
+
+    页面是离线单文件，内嵌不了真地图。所以这里给三层：
+      1. SVG 示意图——顺序与相对方位，离线可看；
+      2. 逐日停靠点——每个名字都是可点的地图搜索链接；
+      3. 两个跳转按钮——「看全部点位」和「规划整条路线」交给高德网页版，
+         有网时点一下就得到真地图和真路径。
+    只在停靠点带 `geo: {lat,lng}` 时才画图与给路线按钮；没有坐标就退化成
+    纯链接列表，不留空壳。
+    """
+    rows_data, seq = _stops(it)
+    if not rows_data:
+        return ""
+    rows, pts = [], []
+    for day_no, (did, stops) in enumerate(rows_data, 1):
+        nodes = []
+        for name, n, lat, lng in stops:
+            if lat is not None and lng is not None:
+                pts.append((lng, lat, name, day_no, n))
+            nodes.append(f'<a class="rnode" href="{e(_map_url(name))}" target="_blank" '
+                         f'rel="noopener"><i>{n}</i>{e(name)}</a>')
+        rows.append('<div class="rline"><b>' + e(did)
+                    + '</b><div class="rstops">' + '<span class="rarrow">→</span>'.join(nodes)
+                    + "</div></div>")
+
+    head = ('<div class="rhead">动线一览<span class="rsub">'
+            '按行程顺序串起来；标号与下方停靠点一致</span></div>')
+    body = head + _routemap(pts, seq) + "".join(rows)
+
+    # 跳外部地图：多点标注 + 路径规划。uri.amap.com 的 via 只支持一个途经点，
+    # 所以路线链接最多体现三段，真正的完整顺序看上面的示意图与列表。
+    links = []
+    mk = nw.markers_url(pts)
+    if mk:
+        links.append('<a class="rbtn" href="' + e(mk) + '" target="_blank" '
+                     'rel="noopener">在高德看全部点位</a>')
+    rt = nw.route_url(pts)
+    if rt:
+        links.append('<a class="rbtn ghost" href="' + e(rt) + '" target="_blank" '
+                     'rel="noopener">规划整条路线</a>')
+    if links:
+        tip = "示意图非导航路径，真实路况以地图为准"
+        if len(pts) > nw.MARKER_LIMIT:
+            tip += f"；「全部点位」只标前 {nw.MARKER_LIMIT} 个，其余请看上方示意图"
+        foot = '<div class="rfoot">' + "".join(links) + "<span>" + tip + "</span></div>"
+    else:
+        foot = ('<div class="rfoot"><span>按行程顺序画的动线；'
+                '点位名可点，点开就是地图搜索</span></div>')
+    return '<div class="route">' + body + foot + "</div>"
+
+
 def _days(it):
-    days = it.get("days") or []
+    days = _objs(it.get("days"))
     if not days:
         return ""
     out = [h2("days", "逐日行程")]
+    flow = _flow(it)
+    if flow:
+        out.append(flow)
     anchors = []
     for idx, d in enumerate(days, 1):
         did = _day_anchor(d, idx)
@@ -1036,7 +1391,7 @@ def _days(it):
     out.append('<div class="daynav">' + "".join(anchors) + "</div>")
     for idx, d in enumerate(days, 1):
         did = _day_anchor(d, idx)
-        items = d.get("items") or []
+        items = [i for i in _objs(d.get("items")) if not _blank_item(i)]
         wk = f'（{e(d["weekday"])}）' if d.get("weekday") else ""
         out.append(
             '<details class="day" id="' + did + '" open><summary>'
@@ -1056,47 +1411,68 @@ def _days(it):
             st_txt = {"confirmed": "已订", "not_required": "无需预约",
                       "todo": "待预约", "unavailable": "约不到"}.get(st)
             st_html = '<span class="pl">（' + e(st_txt) + "）</span>" if st_txt else ""
+            # 要订的东西（门票/住宿/车票）挂上平台搜索入口：方案不写死价格，
+            # 点进去看当天报价与余票。只认数据里显式给了 booking 的条目。
+            book = i.get("booking") or {}
+            chips = ""
+            if isinstance(book, dict) and book.get("keyword"):
+                chips = nw.link_chips(nw.booking_links(
+                    book.get("keyword"), book.get("kind") or "ticket"))
             note = ('<div class="nt">' + e(i["notes"]) + "</div>") if i.get("notes") else ""
+            meta = (("<div>" + place + st_html + "</div>") if (place or st_html) else "") + chips
+            t_html = ('<div class="t">' + e(i.get("time")) + "</div>") if i.get("time") else ""
             out.append(
-                '<div class="slot"><div class="t">' + e(i.get("time") or "") + "</div>"
-                '<div class="ti">' + e(i.get("title") or "") + tag + "</div>"
-                "<div>" + place + st_html + "</div>" + note + "</div>"
+                '<div class="slot">' + t_html
+                + '<div class="ti">' + e(i.get("title") or "") + tag + "</div>"
+                + meta + note + "</div>"
             )
         out.append("</div>")
-        for a in d.get("alternatives") or []:
-            out.append('<div class="alt"><b>备选</b> ' + e(a.get("title", ""))
-                       + "｜触发条件：" + e(a.get("trigger") or "未写") + "</div>")
+        for a in _objs(d.get("alternatives")):
+            if a.get("title") or a.get("trigger"):
+                out.append('<div class="alt"><b>备选</b> ' + e(a.get("title", ""))
+                           + "｜触发条件：" + e(a.get("trigger") or "未写") + "</div>")
         out.append("</div></details>")
     return "".join(out)
 
 
 def _food(it):
-    food = it.get("food") or []
+    food = [x for x in (it.get("food") or [])
+            if isinstance(x, dict) and str(x.get("name") or "").strip()]
     if not food:
         return ""
-    rows = "".join(
-        f'<tr><td>{e(x.get("name", ""))}</td><td class="num">{e(x.get("price") or "未查到")}</td>'
-        f'<td>{e(x.get("why", ""))}</td><td>{e(x.get("note") or "—")}</td></tr>'
-        for x in food
-    )
+    rows = ""
+    for x in food:
+        name = str(x.get("name", ""))
+        kw = str(x.get("search") or name).strip()
+        chips = nw.link_chips(nw.booking_links(kw, x.get("booking_kind") or "food"))
+        rows += (f'<tr><td>{e(name)}{chips}</td>'
+                 f'<td class="num">{e(x.get("price") or "未查到")}</td>'
+                 f'<td>{e(x.get("why", ""))}</td><td>{e(x.get("note") or "—")}</td></tr>')
     return (h2("food", "美食推荐")
             + '<table><thead><tr><th>店/摊</th><th class="num">人均</th>'
-            + '<th>为什么去</th><th>备注</th></tr></thead><tbody>' + rows + '</tbody></table>')
+            + '<th>为什么去</th><th>备注</th></tr></thead><tbody>' + rows + '</tbody></table>'
+            + '<div class="exlog">人均是平台实时价，会变；点店名旁的入口看当天报价，'
+              '本方案不写死价格。</div>')
 
 
 def _budget(it, req):
-    cats = (it.get("budget") or {}).get("categories") or []
+    b = it.get("budget") if isinstance(it.get("budget"), dict) else {}
+    cats = _objs(b.get("categories"))
     if not cats:
         return ""
-    cur = (it.get("budget") or {}).get("currency", "CNY")
-    caps = [c.get("max") for c in cats if isinstance(c.get("max"), (int, float))]
+    cur = b.get("currency", "CNY")
+    # 先全部过 nw.num：预算条是按比例画宽的，一个 nan 就能让 left/width 变成 "nan%"，
+    # 条子整根消失还看不出哪条坏；inf 更会让所有条挤成 0 宽。
+    rows_data = [(c.get("name", ""), nw.num(c.get("min")), nw.num(c.get("max")))
+                 for c in cats]
+    caps = [hi for _n, _lo, hi in rows_data if hi is not None]
     top = max(caps) if caps else 1
-    lo_sum = sum(c["min"] for c in cats if isinstance(c.get("min"), (int, float)))
-    hi_sum = sum(c["max"] for c in cats if isinstance(c.get("max"), (int, float)))
+    top = top or 1                        # 全是 0 时别拿 0 当分母
+    lo_sum = sum(lo for _n, lo, _hi in rows_data if lo is not None)
+    hi_sum = sum(hi for _n, _lo, hi in rows_data if hi is not None)
     rows = ""
-    for c in cats:
-        lo, hi = c.get("min"), c.get("max")
-        if isinstance(lo, (int, float)) and isinstance(hi, (int, float)):
+    for name, lo, hi in rows_data:
+        if lo is not None and hi is not None:
             left = lo / top * 100
             width = max((hi - lo) / top * 100, 1.5)
             bar = f'<div class="bar"><i style="left:{left:.1f}%;width:{width:.1f}%"></i></div>'
@@ -1104,39 +1480,50 @@ def _budget(it, req):
         else:
             bar = ""
             amt = "未查到"
-        rows += (f'<tr><td>{e(c.get("name", ""))}{bar}</td>'
+        rows += (f'<tr><td>{e(name)}{bar}</td>'
                  f'<td class="num">{e(amt)}</td></tr>')
     rows += (f'<tr><td class="total">合计（{e(cur)}）</td>'
              f'<td class="num total"><span class="hl">{lo_sum:g} – {hi_sum:g}</span></td></tr>')
-    cap = g(req, "budget", "amount_max")
+    cap = nw.num(g(req, "budget", "amount_max"))
     alert = ""
-    if isinstance(cap, (int, float)) and hi_sum > cap:
+    if cap is not None and hi_sum > cap:
         alert = (f'<div class="note">分项上限合计 {hi_sum:g}，比预算 {cap:g} 高 '
                  f'{hi_sum - cap:g}。要么压住宿和餐饮，要么把预算上调。</div>')
     return h2("budget", "预算明细") + f'<table><tbody>{rows}</tbody></table>{alert}'
 
 
 def _checklist(it):
-    cl = it.get("checklist") or []
+    cl = _objs(it.get("checklist"))
     if not cl:
         return ""
+    # 状态是渲染时就定死的：数据里 status=done 才画「已办」标记。
+    # 页面上不提供可点的勾选框——离线单文件改了也不落盘，点了等于白点，
+    # 真正的状态管理走宿主的待办/提醒（见 SKILL.md S7）。
+    done_n = 0
     items = ""
     for c in cl:
         done = c.get("status") == "done"
+        done_n += 1 if done else 0
         prio = "必办" if c.get("priority") == "must" else "可选"
         dl = f'　截止 {e(c.get("deadline"))}' if c.get("deadline") else ""
         unres = (f'<div class="nt">没办成怎么办：{e(c["if_unresolved"])}</div>'
                  if c.get("if_unresolved") else "")
-        chk = " checked" if done else ""
-        items += ('<label class="todo"><input type="checkbox"' + chk + ">"
-                  '<span class="txt"><span class="ti">【' + prio + "】" + e(c.get("task", ""))
-                  + dl + "</span>" + unres + "</span></label>")
-    return h2("todo", "出发前待办") + '<div class="card">' + items + "</div>"
-    # 勾选框是真能点的：纯 HTML input，不写脚本、不落盘
+        mark = '<span class="mark mark-done" title="已办">✓</span>' if done \
+            else '<span class="mark" title="未办"></span>'
+        # 「买门票/订酒店/订车票」这类待办直接挂平台入口，用户不用自己再搜一遍。
+        bk = c.get("booking") or {}
+        chips = (nw.link_chips(nw.booking_links(bk.get("keyword"), bk.get("kind") or "ticket"))
+                 if isinstance(bk, dict) and bk.get("keyword") else "")
+        items += ('<div class="todo' + (" is-done" if done else "") + '">' + mark
+                  + '<span class="txt"><span class="ti">【' + prio + "】"
+                  + e(c.get("task", "")) + dl + "</span>" + chips + unres + "</span></div>")
+    summary = (f'<div class="todo-sum">已办 {done_n} / {len(cl)}</div>'
+               if len(cl) > 1 else "")
+    return h2("todo", "出发前待办") + '<div class="card">' + summary + items + "</div>"
 
 
 def _pitfalls(trip):
-    ps = trip.get("pitfalls") or []
+    ps = _objs(trip.get("pitfalls"))
     if not ps:
         return ""
     out = [h2("pitfalls", "踩坑指南")]
@@ -1152,8 +1539,8 @@ def _pitfalls(trip):
 
 
 def _sources(trip):
-    facts = trip.get("facts") or []
-    sources = trip.get("sources") or []
+    facts = _objs(trip.get("facts"))
+    sources = _objs(trip.get("sources"))
     if not facts and not sources:
         return ""
     smap = {s.get("source_id"): s for s in sources}
@@ -1321,8 +1708,8 @@ def _nav(present):
 
 
 def html_from_trip(trip: dict) -> str:
-    req = trip.get("request") or {}
-    it = trip.get("itinerary") or {}
+    req = _dict(trip.get("request"))
+    it = _dict(trip.get("itinerary"))
     ver = trip.get("plan_version", 1)
     title = e(trip.get("title") or trip.get("trip_id", "旅行方案"))
     blocks = [
@@ -1358,26 +1745,39 @@ def html_from_trip(trip: dict) -> str:
 
 
 def write_outputs(trip_path: str, out_dir: str | None = None,
-                  force: bool = False) -> dict:
-    trip, _label, src_dir = read_trip_source(trip_path)
-    problems = structure_problems(trip)
-    if problems and not force:
-        more = ("\n  ... 其余 " + str(len(problems) - 12) + " 项省略"
-                if len(problems) > 12 else "")
-        raise TripDataError(
-            "结构校验未通过，拒绝渲染（" + str(len(problems)) + " 项）：\n  - "
-            + "\n  - ".join(problems[:12]) + more
-            + "\n  先跑 build_trip.py validate 修好；确认要出图再加 --force")
+                  force: bool = False, skip_structure_gate: bool = False) -> dict:
+    """渲染 MD + HTML。
+
+    skip_structure_gate=True 供 `build_trip.py render` 使用：那条路已经校验过一次，
+    同一份数据、同一套规则再校验一遍纯属重复收费（校验本身不慢，但每次失败都要
+    多跑一遍全量扫描）。只有一条路会真正开门：
+      · build_trip.py render → 自己先 validate，再 skip 渲染器这道
+      · render_plan.py 直接跑 → 走这里的结构门
+    """
+    trip, _label, src_dir, origin = read_trip_source(trip_path, with_origin=True)
+    if not skip_structure_gate:
+        problems = structure_problems(trip, origin)
+        if problems and not force:
+            more = ("\n  ... 其余 " + str(len(problems) - 12) + " 项省略"
+                    if len(problems) > 12 else "")
+            raise TripDataError(
+                "结构校验未通过，拒绝渲染（" + str(len(problems)) + " 项）：\n  - "
+                + "\n  - ".join(problems[:12]) + more
+                + "\n  按每项后面标注的分片文件改；确认要出图再加 --force")
     base = out_dir or src_dir
     os.makedirs(base, exist_ok=True)
     tid = trip.get("trip_id") or "travel-plan"
     ver = trip.get("plan_version", 1)
     md_path = os.path.join(base, f"{tid}_v{ver}.md")
     html_path = os.path.join(base, f"{tid}_v{ver}.html")
+    # 两份都在内存里算完再落盘：中途抛异常时不会留下"MD 是新的、HTML 是旧的"
+    # 这种半新半旧的产物——读者分不出哪份对，比一份都没有更糟。
+    md_text = md_from_trip(trip)
+    html_text = html_from_trip(trip)
     with open(md_path, "w", encoding="utf-8", newline="\n") as f:
-        f.write(md_from_trip(trip))
+        f.write(md_text)
     with open(html_path, "w", encoding="utf-8", newline="\n") as f:
-        f.write(html_from_trip(trip))
+        f.write(html_text)
     return {"trip_id": tid, "plan_version": ver, "md": md_path, "html": html_path,
             "content_hash": canonical_hash(trip)}
 
@@ -1446,6 +1846,13 @@ def main(argv=None) -> int:
     except TripDataError as exc:            # 结构门：退出码 3，与读取失败区分开
         print(f"x {exc}", file=sys.stderr)
         return 3
+    except AttributeError as exc:
+        # 坏数据的最后一层网：元素写成字符串之类的问题本该被结构门拦住，
+        # 万一漏到这儿，也要给一句人话 + 退出码，而不是甩一段 traceback。
+        print(f"x 数据里有字段类型不对，渲染中断：{exc}\n"
+              "  先用 python scripts/build_trip.py validate <方案目录> 定位到具体分片",
+              file=sys.stderr)
+        return 4
     except (OSError, ValueError, KeyError, TypeError) as exc:
         print(f"x {exc}", file=sys.stderr)
         return 2

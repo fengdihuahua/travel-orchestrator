@@ -13,6 +13,7 @@
             "title": "成山头看日出（05:46）",
             "kind": "nature",
             "place": "成山头景区",
+            "geo": { "lng": 122.6900, "lat": 37.4000 },
             "booking_status": "todo",
             "notes": "04:50 前到观景台占位。景区停车位少，节假日 5:30 后基本满，建议打车或提前停外围。"
           },
@@ -22,6 +23,7 @@
             "title": "早餐 + 补眠",
             "kind": "rest",
             "place": "荣成住地",
+            "geo": { "lng": 122.4300, "lat": 37.1700 },
             "booking_status": "not_required"
           },
           {
@@ -30,6 +32,7 @@
             "title": "环海路骑行",
             "kind": "visit",
             "place": "荣成环海路",
+            "geo": { "lng": 122.5500, "lat": 37.2500 },
             "booking_status": "not_required",
             "notes": "共享单车沿线可还车。逆时针骑风景更好，但东北风天顶风吃力。"
           },
@@ -39,6 +42,7 @@
             "title": "午餐",
             "kind": "meal",
             "place": "荣成市区",
+            "geo": { "lng": 122.4200, "lat": 37.1650 },
             "booking_status": "not_required"
           },
           {
@@ -47,6 +51,7 @@
             "title": "前往威海站",
             "kind": "transport",
             "place": "威海站",
+            "geo": { "lng": 122.1200, "lat": 37.4500 },
             "booking_status": "not_required",
             "notes": "荣成到威海站约 1 小时，打车约 120 元，城际巴士班次较疏。这段路不能卡点。"
           },

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-build_trip.py — 行程数据分片存取与校验工具 (v1.1.0)
+build_trip.py — 行程数据分片存取与校验工具 (v1.3.0)
 归属 skill: travel-orchestrator
 
 为什么需要它
@@ -39,6 +39,13 @@ build_trip.py — 行程数据分片存取与校验工具 (v1.1.0)
 只有确实需要一个独立大 JSON（交付 / 存档 / 喂给别的工具）时才 `assemble`，
 或 `render ... --write-json` 顺手落一份。产物不是数据源。
 
+v1.2.0 起
+---------
+① **报错落到分片**：合并时记录「字段来自哪个文件」，校验（和渲染结构门）的每条
+   错误后面会跟一句「见 parts/10_days_D1.json」，不用在十几个分片里盲翻；
+② **一条路只校验一次**：`render` 自己校验通过后，交给渲染器时跳过它内部那道
+   重复校验（同一份数据、同一套规则，跑两遍只是浪费）。
+
 用法
 ----
   # 生成骨架，避免从零手写大 JSON
@@ -64,11 +71,12 @@ build_trip.py — 行程数据分片存取与校验工具 (v1.1.0)
 import argparse
 import json
 import os
+import re
 import shutil
 import sys
 from datetime import datetime, timedelta
 
-VERSION = "1.1.0"
+VERSION = "1.3.0"
 
 # 渲染器/红方复核都依赖的最小结构（缺了必然报错，所以先在这里拦住）
 REQUIRED_TOP = {
@@ -124,12 +132,19 @@ def die(msg, hints=None):
     sys.exit(2)
 
 
-def deep_merge(base, patch, path=""):
+def deep_merge(base, patch, path="", origin=None, src=None, conflicts=None):
     """深合并 patch 到 base。
 
     - 嵌套 dict 递归合并
     - 键名以 '+' 结尾 → 追加到同名列表（`days+` 追加到 `days`）
     - 其他列表 / 标量 → 覆盖
+
+    origin / src 给定时，顺手记下「每个字段来自哪个分片文件」，
+    报错时就能直接说改哪个文件，不用在十几个分片里盲翻。
+
+    conflicts 给定时，把**会静默丢数据**的合并记进去（见下）。这两种情况以前是
+    悄悄吞掉的：作者写了东西、命令返回成功、渲染出来少了一整天，而没有任何提示。
+    宁可炸出来让人改分片，也不能让"少了内容"当成正常结果交付。
     """
     if not isinstance(patch, dict):
         return patch
@@ -138,34 +153,72 @@ def deep_merge(base, patch, path=""):
     for key, val in patch.items():
         append = isinstance(key, str) and key.endswith("+")
         real = key[:-1] if append else key
+        here = (path + "/" + str(real)) if path else str(real)
         if append:
             cur = base.get(real)
-            if not isinstance(cur, list):
+            if cur is None:
                 cur = []
                 base[real] = cur
-            if isinstance(val, list):
-                cur.extend(val)
-            else:
-                cur.append(val)
+            elif not isinstance(cur, list):
+                # 前面某片把 days 写成了对象/标量，这里一加就把它整个丢掉
+                if conflicts is not None:
+                    conflicts.append(
+                        "%s：前面已有分片把 `%s` 写成了 %s（不是列表），"
+                        "`%s+` 会把它整块丢掉" % (src or "?", real,
+                                                type(cur).__name__, real))
+                cur = []
+                base[real] = cur
+            for v in (val if isinstance(val, list) else [val]):
+                cur.append(v)
+                if origin is not None and src:
+                    origin[here + "[" + str(len(cur) - 1) + "]"] = src
             continue
         if isinstance(val, dict) and isinstance(base.get(real), dict):
-            deep_merge(base[real], val, path + "/" + str(real))
+            deep_merge(base[real], val, here, origin, src, conflicts)
         else:
+            # 反过来：前面用 `days+` 攒出来的列表，这里用 `days` 一覆盖就全没了
+            if conflicts is not None and origin and isinstance(base.get(real), list) \
+                    and (here + "[0]") in origin:
+                conflicts.append(
+                    "%s：用 `%s` 覆盖了前面分片用 `%s+` 追加的列表"
+                    "（%d 项），追加的内容会全部丢失"
+                    % (src or "?", real, real, len(base[real])))
             base[real] = val
+            if origin is not None and src:
+                origin[here] = src
     return base
 
 
+def _part_sort_key(name):
+    """分片文件名的排序键：把文件名里的数字段按**数值**比较。
+
+    光用 sorted() 是字典序，`11_days_D10.json` 会排在 `11_days_D2.json` 前面——
+    第 10 天插到第 2 天前面，行程顺序直接错乱，而且没有任何报错。
+    这里把每段数字转成 (0, 数值)，文字段转成 (1, 原文)，保证
+    `10_days_D1` < `10_days_D2` < `10_days_D10`。
+    """
+    return tuple((0, int(p), "") if p.isdigit() else (1, 0, p)
+                 for p in re.findall(r"\d+|\D+", name))
+
+
 def load_parts(parts_dir, quiet=False):
-    """按文件名顺序读取 parts/*.json，逐个深合并。"""
+    """按文件名顺序读取 parts/*.json，逐个深合并。
+
+    返回 (合并结果, 分片文件名列表, 字段来源映射)。
+    来源映射的键是合并后的字段路径（如 itinerary/days[0]），值是可读的文件名。
+    """
     if not os.path.isdir(parts_dir):
         die("分片目录不存在：" + parts_dir,
             ["先用 `skeleton` 生成骨架，或把分片 json 放进该目录",
              "也可以直接用 validate 校验已有的 trip.json"])
-    files = sorted(f for f in os.listdir(parts_dir)
-                   if f.endswith(".json") and not f.startswith("_"))
+    # 按**数值**排序，不是字典序：字典序会把 11_days_D10 排到 11_days_D2 前面，
+    # 第 10 天插到第 2 天前面，行程顺序错乱而没有任何报错。
+    files = sorted((f for f in os.listdir(parts_dir)
+                    if f.endswith(".json") and not f.startswith("_")),
+                   key=_part_sort_key)
     if not files:
         die("分片目录里没有 .json 文件：" + parts_dir)
-    merged = {}
+    merged, origin, conflicts = {}, {}, []
     for name in files:
         p = os.path.join(parts_dir, name)
         try:
@@ -180,10 +233,16 @@ def load_parts(parts_dir, quiet=False):
         if not isinstance(data, dict):
             die("分片 " + name + " 顶层必须是 JSON 对象（{}），当前是 "
                 + type(data).__name__)
-        deep_merge(merged, data)
+        deep_merge(merged, data, "", origin, name, conflicts)
         if not quiet:
             print("  + 合并 " + name + " (" + str(os.path.getsize(p)) + " B)")
-    return merged, files
+    if conflicts:
+        # 这两类合并会**静默丢数据**：命令成功、渲染少内容、没有任何提示。
+        # 与其让用户拿到"少了一天"的方案，不如现在就停下来说清改哪一片。
+        die("分片合并会丢数据，" + str(len(conflicts)) + " 处冲突：",
+            conflicts + ["同一个列表只能选一种写法：要么各片都用 `days+` 追加，",
+                         "要么只在最后一片用 `days` 整块给；两种混用结果取决于文件名顺序"])
+    return merged, files, origin
 
 
 def _load_json_file(path):
@@ -208,25 +267,33 @@ def parts_dir_of(path):
     return os.path.join(os.path.dirname(p), "parts")
 
 
-def resolve_trip(path, quiet=False):
+def resolve_trip(path, quiet=False, with_origin=False):
     """统一的取数入口（渲染器、红方复核、本工具自己都走这里）。
 
     传目录 → 按名序合并该目录下的 parts/*.json（就地，不落盘）
     传文件 → 直接读该文件
 
-    返回 (行程字典, 数据来源描述, 分片数)。
+    返回 (行程字典, 数据来源描述, 分片数)；
+    with_origin=True 时再追加一项「字段 → 分片文件」映射（四个返回值）。
     """
     p = os.path.abspath(path)
     if os.path.isfile(p):
-        return order_top(_load_json_file(p)), os.path.basename(p), 0
+        trip = order_top(_load_json_file(p))
+        return (trip, os.path.basename(p), 0, {}) if with_origin \
+            else (trip, os.path.basename(p), 0)
     if not os.path.isdir(p):
         die("找不到方案目录或 trip.json：" + path,
             ["方案目录一般形如 travel-plan/<trip_id>/，里面有 parts/ 或 trip.json",
              "也可以直接把 trip.json 的路径传进来"])
     pd = parts_dir_of(p)
-    merged, files = load_parts(pd, quiet=quiet)
+    merged, files, origin = load_parts(pd, quiet=quiet)
     # 标签跟着实际形态走：分片在 parts/ 子目录里就写 parts/，平铺在方案目录里就写目录名
     label = os.path.basename(pd) + "/（" + str(len(files)) + " 个分片）"
+    if with_origin:
+        # 来源写成「相对方案目录的路径」，报错时眼睛能直接落到文件
+        prefix = "" if os.path.abspath(pd) == p else os.path.basename(pd) + "/"
+        return order_top(merged), label, len(files), \
+            {k: prefix + v for k, v in origin.items()}
     return order_top(merged), label, len(files)
 
 
@@ -294,17 +361,42 @@ def split_trip(trip):
     return out
 
 
-def validate(trip, label="trip.json", quiet=False):
-    """结构校验。返回 (是否通过, 错误列表, 警告列表)。"""
+def validate(trip, label="trip.json", quiet=False, origin=None):
+    """结构校验。返回 (是否通过, 错误列表, 警告列表)。
+
+    origin（可选）是「字段 → 分片文件」映射。给定时，每条错误后面会跟一句
+    「见 parts/10_days_D1.json」：报错落到具体文件，改一片就行，不必在
+    十几个分片里逐个翻找。
+    """
     errors, warns = [], []
+
+    def where(key):
+        """给一个字段路径，往上找最近一个记过的来源，返回 '（见 xxx）'。
+
+        按**最后一个**分隔符往上截（`a/b[1]/c` → `a/b[1]` → `a/b`），
+        不能"先看 [ 再看 /"：那样 `itinerary/days[1]/items` 会被截成
+        `itinerary/days`，直接跳过真正记过的 `itinerary/days[1]`。
+        """
+        if not origin:
+            return ""
+        cur = key
+        for _ in range(12):
+            if cur in origin:
+                return "（见 " + str(origin[cur]) + "）"
+            cut = max(cur.rfind("["), cur.rfind("/"))
+            if cut <= 0:
+                return ""
+            cur = cur[:cut]
+        return ""
+
     if not isinstance(trip, dict):
         return False, ["顶层不是 JSON 对象"], []
     for key, typ in REQUIRED_TOP.items():
         if key not in trip:
-            errors.append("缺少顶层字段 " + key)
+            errors.append("缺少顶层字段 " + key + where(key))
         elif not isinstance(trip[key], typ):
             errors.append("字段 " + key + " 应为 " + typ.__name__ + "，实际是 "
-                          + type(trip[key]).__name__)
+                          + type(trip[key]).__name__ + where(key))
     itin = trip.get("itinerary") if isinstance(trip.get("itinerary"), dict) else {}
     # request 子结构：字段名与 render_plan / red_team 的约定必须一致，
     # 不一致会出现"生成成功但一渲染/一复核就阻断"的情况，所以在这里提前拦住
@@ -312,89 +404,132 @@ def validate(trip, label="trip.json", quiet=False):
     if isinstance(trip.get("request"), dict):
         dates = req.get("dates") if isinstance(req.get("dates"), dict) else {}
         if not dates.get("start") or not dates.get("end"):
-            errors.append("request.dates 缺少 start / end（渲染与红方复核都依赖它）")
+            errors.append("request.dates 缺少 start / end（渲染与红方复核都依赖它）"
+                          + where("request/dates"))
         else:
             for k in ("start", "end"):
                 try:
                     datetime.strptime(dates[k], "%Y-%m-%d")
                 except (ValueError, TypeError):
                     errors.append("request.dates." + k + " 格式应为 YYYY-MM-DD，当前 "
-                                  + str(dates[k]))
+                                  + str(dates[k]) + where("request/dates/" + k))
         if not req.get("companions"):
-            errors.append("request.companions 为空（红方判定为阻断项）")
+            errors.append("request.companions 为空（红方判定为阻断项）"
+                          + where("request/companions"))
         elif not isinstance(req["companions"], str):
             warns.append("request.companions 建议用字符串（如「2 成人」），当前是 "
-                         + type(req["companions"]).__name__)
+                         + type(req["companions"]).__name__
+                         + where("request/companions"))
         if not isinstance(req.get("budget"), dict):
-            warns.append("request.budget 缺失或不是对象（含 amount_max/currency/mode）")
+            warns.append("request.budget 缺失或不是对象（含 amount_max/currency/mode）"
+                         + where("request/budget"))
         elif req["budget"].get("amount_max") is None:
-            warns.append("request.budget.amount_max 为 null，预算超支检查（RT-S06）将跳过")
+            warns.append("request.budget.amount_max 为 null，预算超支检查（RT-S06）将跳过"
+                         + where("request/budget/amount_max"))
         for k in ("origin", "destination"):
             if not isinstance(req.get(k), dict) or not (req[k] or {}).get("name"):
-                warns.append("request." + k + ".name 为空，封面会显示「未定」")
+                warns.append("request." + k + ".name 为空，封面会显示「未定」"
+                             + where("request/" + k + "/name"))
     for key, typ in REQUIRED_ITINERARY.items():
         if key not in itin:
-            errors.append("itinerary 缺少字段 " + key)
+            errors.append("itinerary 缺少字段 " + key + where("itinerary/" + key))
         elif not isinstance(itin[key], typ):
             errors.append("itinerary." + key + " 应为 " + typ.__name__ + "，实际是 "
-                          + type(itin[key]).__name__)
+                          + type(itin[key]).__name__ + where("itinerary/" + key))
     # 逐日行程
     days = itin.get("days") if isinstance(itin.get("days"), list) else []
     if isinstance(itin.get("days"), list) and not days:
-        errors.append("itinerary.days 为空，方案至少要有一天")
+        errors.append("itinerary.days 为空，方案至少要有一天" + where("itinerary/days"))
     seen_ids = set()
     for i, d in enumerate(days):
+        day_key = "itinerary/days[" + str(i) + "]"
         if not isinstance(d, dict):
-            errors.append("itinerary.days[" + str(i) + "] 不是对象")
+            errors.append("itinerary.days[" + str(i) + "] 不是对象" + where(day_key))
             continue
         did = d.get("day_id") or ("#" + str(i + 1))
         if not d.get("date"):
-            errors.append(did + " 缺 date")
+            errors.append(did + " 缺 date" + where(day_key + "/date"))
         else:
             try:
                 real = WEEKDAY_CN[datetime.strptime(d["date"], "%Y-%m-%d").weekday()]
                 if d.get("weekday") and real not in str(d["weekday"]):
                     warns.append(did + " weekday 写的是 " + str(d["weekday"])
-                                 + "，实际是 " + real)
+                                 + "，实际是 " + real + where(day_key + "/weekday"))
             except (ValueError, TypeError):
-                errors.append(did + " date 格式应为 YYYY-MM-DD，当前 " + str(d.get("date")))
+                errors.append(did + " date 格式应为 YYYY-MM-DD，当前 "
+                              + str(d.get("date")) + where(day_key + "/date"))
         if not isinstance(d.get("items"), list) or not d.get("items"):
-            warns.append(did + " 没有 items（行程条目），渲染出来会是空白天")
+            warns.append(did + " 没有 items（行程条目），渲染出来会是空白天"
+                         + where(day_key + "/items"))
         for j, it in enumerate(d.get("items") or []):
+            item_key = day_key + "/items[" + str(j) + "]"
             if not isinstance(it, dict):
-                errors.append(did + " items[" + str(j) + "] 不是对象")
+                errors.append(did + " items[" + str(j) + "] 不是对象" + where(item_key))
                 continue
             iid = it.get("item_id")
             if not iid:
-                warns.append(did + " items[" + str(j) + "] 缺 item_id")
+                warns.append(did + " items[" + str(j) + "] 缺 item_id"
+                             + where(item_key + "/item_id"))
             elif iid in seen_ids:
-                errors.append("item_id 重复：" + str(iid))
+                errors.append("item_id 重复：" + str(iid) + where(item_key + "/item_id"))
             else:
                 seen_ids.add(iid)
             if not it.get("title"):
-                warns.append(did + " items[" + str(j) + "] 缺 title")
+                warns.append(did + " items[" + str(j) + "] 缺 title"
+                             + where(item_key + "/title"))
     # 预算：真实结构是 {"currency","categories":[{name,min,max}],"total":{...}}
     if isinstance(itin.get("budget"), dict):
         b = itin["budget"]
         if "categories" not in b and "total" not in b:
-            warns.append("itinerary.budget 既没有 categories 也没有 total")
+            warns.append("itinerary.budget 既没有 categories 也没有 total"
+                         + where("itinerary/budget"))
         for k, c in enumerate(b.get("categories") or []):
+            cat_key = "itinerary/budget/categories[" + str(k) + "]"
             if not isinstance(c, dict):
-                errors.append("budget.categories[" + str(k) + "] 不是对象")
+                errors.append("budget.categories[" + str(k) + "] 不是对象" + where(cat_key))
                 continue
             if c.get("min") is None or c.get("max") is None:
-                warns.append("预算分项「" + str(c.get("name")) + "」缺 min/max")
+                warns.append("预算分项「" + str(c.get("name")) + "」缺 min/max"
+                             + where(cat_key))
             elif isinstance(c.get("min"), (int, float)) and isinstance(c.get("max"), (int, float)) \
                     and c["min"] > c["max"]:
-                errors.append("预算分项「" + str(c.get("name")) + "」min 大于 max")
+                errors.append("预算分项「" + str(c.get("name")) + "」min 大于 max"
+                              + where(cat_key + "/min"))
     # 天气：真实结构是 {"kind","summary","entries":[...]}（也接受直接给列表）
     wx = itin.get("weather")
     if isinstance(wx, dict):
         if not isinstance(wx.get("entries"), list):
-            warns.append("itinerary.weather 缺少 entries 列表")
+            warns.append("itinerary.weather 缺少 entries 列表" + where("itinerary/weather"))
     elif wx is not None and not isinstance(wx, list):
         errors.append("itinerary.weather 应为对象（含 entries）或列表，实际是 "
-                      + type(wx).__name__)
+                      + type(wx).__name__ + where("itinerary/weather"))
+    # list[dict] 字段的**元素级**校验
+    # ----------------------------------
+    # 只查「容器是 list」不够：元素写成字符串时容器照样合法，一路放行到渲染器，
+    # 然后在 `x.get("name")` 上抛 AttributeError —— 用户看到的是 traceback，
+    # 而不是「哪个字段写错了」。这里提前把元素类型点出来，报错仍然落到具体分片。
+    def check_obj_list(items, path, label, sample_keys):
+        if not isinstance(items, list):
+            return
+        for i, it in enumerate(items):
+            at = path + "[" + str(i) + "]"
+            if not isinstance(it, dict):
+                errors.append(label + "[" + str(i) + "] 应为对象，实际是 "
+                              + type(it).__name__ + where(at))
+            elif sample_keys and not any(k in it for k in sample_keys):
+                warns.append(label + "[" + str(i) + "] 里 "
+                             + "/".join(sample_keys) + " 一个都没有，渲染出来可能是空行"
+                             + where(at))
+
+    check_obj_list(itin.get("food"), "itinerary/food", "itinerary.food", ("name",))
+    check_obj_list(itin.get("checklist"), "itinerary/checklist",
+                   "itinerary.checklist", ("task",))
+    check_obj_list(trip.get("sources"), "sources", "sources", ("source_id",))
+    check_obj_list(trip.get("facts"), "facts", "facts", ("claim", "conclusion"))
+    interests = req.get("interests") if isinstance(req.get("interests"), dict) else {}
+    check_obj_list(interests.get("must"), "request/interests/must",
+                   "request.interests.must", ("label", "name"))
+
     missing_opt = [k for k in OPTIONAL_TOP if k not in trip]
     if missing_opt:
         warns.append("可选字段未填（不阻塞，但会影响交付完整度）："
@@ -423,9 +558,9 @@ def cmd_assemble(args):
     out = os.path.abspath(args.out or os.path.join(trip_dir, "trip.json"))
     print("组装 trip.json（只在需要一份独立大 JSON 时才用）")
     print("  分片目录: " + parts_dir)
-    merged, files = load_parts(parts_dir)
+    merged, files, origin = load_parts(parts_dir)
     merged = order_top(merged)
-    ok, errors, _ = validate(merged, os.path.basename(out), quiet=False)
+    ok, errors, _ = validate(merged, os.path.basename(out), quiet=False, origin=origin)
     # 组装成功后先备份旧文件，再落盘
     if args.dry_run:
         print("  [dry-run] 未写入。" + ("结构校验通过。" if ok else "结构校验未通过，见上。"))
@@ -452,21 +587,25 @@ def cmd_assemble(args):
 
 
 def cmd_render(args):
-    """合并 + 校验 + 渲染。默认不落中间 trip.json。"""
+    """合并 + 校验 + 渲染。默认不落中间 trip.json。
+
+    校验只做一次：这里通过后，交给渲染器时带 skip_structure_gate，
+    避免同一份数据、同一套规则在一条命令里被校验两遍。
+    """
     src = os.path.abspath(args.trip_dir)
-    trip, label, _ = resolve_trip(src, quiet=False)
+    trip, label, _n, origin = resolve_trip(src, quiet=False, with_origin=True)
     print("-" * 60)
     print("渲染自 " + label)
-    ok, errors, _ = validate(trip, label, quiet=False)
+    ok, errors, _ = validate(trip, label, quiet=False, origin=origin)
     if not ok and not args.force:
         die("结构校验未通过，已放弃渲染（避免产出看着成功的废交付物）。",
-            ["先修正上列错误后重跑",
+            ["按每项后面标注的分片文件改，改完重跑本命令",
              "确实要强行渲染：加 --force（不推荐，红方复核还会再拦一次）"])
     if args.write_json:
         base = src if os.path.isdir(src) else os.path.dirname(src)
         _write_trip(trip, os.path.abspath(args.out or os.path.join(base, "trip.json")))
     import render_plan
-    r = render_plan.write_outputs(src, args.out_dir)
+    r = render_plan.write_outputs(src, args.out_dir, skip_structure_gate=True)
     print("ok 已生成 v" + str(r["plan_version"]) + "：")
     print("  MD  : " + r["md"])
     print("  HTML: " + r["html"])
@@ -497,14 +636,14 @@ def cmd_split(args):
             json.dump(obj, fh, ensure_ascii=False, indent=2)
         print("  + " + name + " (" + str(os.path.getsize(p)) + " B)")
     # 自检：合并回来必须与原文完全等值，否则这次拆分就是丢数据
-    merged, _ = load_parts(parts, quiet=True)
+    merged, _files, origin = load_parts(parts, quiet=True)
     same = (json.dumps(merged, ensure_ascii=False, sort_keys=True)
             == json.dumps(trip, ensure_ascii=False, sort_keys=True))
     if not same:
         die("拆分自检失败：合并结果与原文不等值，请勿使用刚写入的分片",
             ["这是一个 bug，请保留 parts/ 目录与原始 trip.json 反馈"])
     print("  自检通过：合并结果与原文完全等值")
-    ok, errors, _ = validate(merged, label, quiet=True)
+    ok, errors, _ = validate(merged, label, quiet=True, origin=origin)
     print("  结构校验：" + ("通过" if ok else "未通过（" + str(len(errors)) + " 项）"))
     print()
     print("下一步：确认无误后可删掉 " + os.path.basename(src)
@@ -517,13 +656,13 @@ def cmd_validate(args):
         die("路径不存在：" + str(args.trip_json),
             ["传方案目录（读其中的 parts/）或直接传 trip.json 路径",
              "方案目录一般是 travel-plan/<trip_id>/"])
-    trip, label, n = resolve_trip(args.trip_json, quiet=True)
+    trip, label, n, origin = resolve_trip(args.trip_json, quiet=True, with_origin=True)
     if n:
         print("数据来源：" + label)
         print()
     # 目录形态下 label 已经带了分片数，这里只补一个可读的来源行
     print("校验对象：" + os.path.abspath(args.trip_json))
-    ok, _, _ = validate(trip, label)
+    ok, _, _ = validate(trip, label, origin=origin)
     return 0 if ok else 1
 
 
@@ -567,7 +706,12 @@ def cmd_schema(args):
     }, ensure_ascii=False, indent=2))
     print()
     print("可选字段：" + "、".join(OPTIONAL_TOP))
-    print("注意：item_id 必须全局唯一，且预算分项 min 不得大于 max —— 这两项是阻断级。")
+    print("三个高频坑（写错必然返工，改之前先看这里）：")
+    print("  1. 逐日行程一天一片，必须写 `\"days+\"`（追加）而不是 `\"days\"`：")
+    print("     写 days 会把前面分片里的天数整个覆盖掉，且不报错。")
+    print("  2. request.companions 是**字符串**（如「2 成人」），不是数组。")
+    print("  3. item_id 全局唯一（跨所有天），预算分项 min 不得大于 max —— 这两项是阻断级。")
+    print("完整说明见 references/data-schema.md。")
     return 0
 
 

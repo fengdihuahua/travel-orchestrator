@@ -18,12 +18,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import re
 import sys
 from datetime import datetime
 
-VERSION = "1.2.0"
+VERSION = "1.3.0"
 
 WEEKDAY_CN = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
 # 各种星期写法 -> 序号（周一=0 … 周日=6）
@@ -123,9 +124,31 @@ def hm(mins):
 
 
 def as_num(v):
-    if isinstance(v, (int, float)) and not isinstance(v, bool):
-        return float(v)
-    return None
+    """数字 → float；布尔与非有限数（nan/inf）一律 None。
+
+    nan/inf 混进来会把「min > max」「合计超预算」比成假结果：nan 参与的比较
+    恒为 False，超支检查会**静默放过**，比报错更危险。
+    """
+    if isinstance(v, bool) or not isinstance(v, (int, float)):
+        return None
+    f = float(v)
+    return f if math.isfinite(f) else None
+
+
+def objs(v):
+    """`[{...}]` 里非对象的元素全部滤掉。
+
+    复核器与渲染器吃同一份数据：元素写成字符串时 `x.get(...)` 抛 AttributeError，
+    复核这一步直接崩掉——"挑刺"变成"报错"，红方等于没跑。坏元素少检几条，
+    也比整份复核跑不完强；类型错误由 build_trip.validate 在前面拦。
+    """
+    return [x for x in (v or []) if isinstance(x, dict)]
+
+
+def sub(d, key):
+    """取嵌套子块，不是对象就当没填（返回 {}）。"""
+    v = d.get(key)
+    return v if isinstance(v, dict) else {}
 
 
 def fact_text(f):
@@ -175,12 +198,12 @@ class Report:
 
 # ------------------------------------------------------------------ 结构层
 def check_structure(trip, rep):
-    req = trip.get("request") or {}
-    it = trip.get("itinerary") or {}
-    days = it.get("days") or []
+    req = sub(trip, "request")
+    it = sub(trip, "itinerary")
+    days = objs(it.get("days"))
 
     # RT-S07 必填字段
-    dates = req.get("dates") or {}
+    dates = sub(req, "dates")
     if not dates.get("start") or not dates.get("end"):
         rep.add("RT-S07", "blocking", "结构", "request.dates",
                 "出发或返程日期缺失，方案没有可执行的时间锚点。",
@@ -218,7 +241,7 @@ def check_structure(trip, rep):
 
         # 收集时间窗
         spans = []
-        for i in d.get("items") or []:
+        for i in objs(d.get("items")):
             iid = i.get("item_id")
             # RT-S02 ID 重复
             if iid:
@@ -251,8 +274,8 @@ def check_structure(trip, rep):
                         "错开时段，或合并为同一项。")
 
     # RT-S08 天气条目 vs 天数
-    weather = it.get("weather") or {}
-    entries = weather.get("entries") or []
+    weather = sub(it, "weather")
+    entries = objs(weather.get("entries"))
     if weather.get("kind") == "forecast" and days and len(entries) != len(days):
         rep.add("RT-S08", "minor", "结构", "itinerary.weather",
                 f"逐日天气预报 {len(entries)} 条，行程 {len(days)} 天，对不上。",
@@ -260,7 +283,7 @@ def check_structure(trip, rep):
 
     # RT-L06 备选
     for d in days:
-        alts = d.get("alternatives") or []
+        alts = objs(d.get("alternatives"))
         if not alts:
             rep.add("RT-L06", "minor", "逻辑", d.get("day_id") or "?",
                     "这一天没有备选方案，遇到下雨或景点满员只能临时抓瞎。",
@@ -269,8 +292,8 @@ def check_structure(trip, rep):
     # RT-L07 conditional 未说明
     if trip.get("status") == "conditional":
         note = (trip.get("status_note") or "").strip()
-        has_gate = bool((it.get("checklist") or [])) and any(
-            c.get("if_unresolved") for c in (it.get("checklist") or []))
+        checklist = objs(it.get("checklist"))
+        has_gate = bool(checklist) and any(c.get("if_unresolved") for c in checklist)
         if not note and not has_gate:
             rep.add("RT-L07", "minor", "结构", "status",
                     "标了 conditional，但没说清在等什么条件成立。",
@@ -279,9 +302,9 @@ def check_structure(trip, rep):
 
 # ------------------------------------------------------------------ 预算层
 def check_budget(trip, rep):
-    req = trip.get("request") or {}
-    budget_it = (trip.get("itinerary") or {}).get("budget") or {}
-    cats = budget_it.get("categories") or []
+    req = sub(trip, "request")
+    budget_it = sub(sub(trip, "itinerary"), "budget")
+    cats = objs(budget_it.get("categories"))
     total_max = 0.0
     total_min = 0.0
     for c in cats:
@@ -296,8 +319,8 @@ def check_budget(trip, rep):
         if hi is not None:
             total_max += hi
 
-    cap = as_num((req.get("budget") or {}).get("amount_max"))
-    cur = (req.get("budget") or {}).get("currency", "CNY")
+    cap = as_num(sub(req, "budget").get("amount_max"))
+    cur = sub(req, "budget").get("currency", "CNY")
     if cap and total_max > cap:
         over = total_max - cap
         rep.add("RT-S06", "major", "预算", "预算合计",
@@ -307,8 +330,8 @@ def check_budget(trip, rep):
 
 # ------------------------------------------------------------------ 溯源层
 def check_provenance(trip, rep):
-    facts = trip.get("facts") or []
-    sources = trip.get("sources") or []
+    facts = objs(trip.get("facts"))
+    sources = objs(trip.get("sources"))
     src_ids = {s.get("source_id") for s in sources if s.get("source_id")}
     src_map = {s.get("source_id"): s for s in sources if s.get("source_id")}
 
@@ -359,7 +382,7 @@ def check_provenance(trip, rep):
                     "未知就是未知，值留空，别用 0 或估计值冒充。")
 
     # RT-F06 自然专项有没有溯源
-    nature = (trip.get("itinerary") or {}).get("nature") or {}
+    nature = sub(sub(trip, "itinerary"), "nature")
     fact_blob = " ".join(fact_text(f) + " " + str(f.get("value") or "") for f in facts)
     for key, kws in NATURE_KEYS.items():
         sec = nature.get(key)
@@ -382,11 +405,11 @@ def check_provenance(trip, rep):
 
 # ------------------------------------------------------------------ 逻辑/安全层
 def check_logic(trip, rep):
-    it = trip.get("itinerary") or {}
-    nature = it.get("nature") or {}
-    days = it.get("days") or []
+    it = sub(trip, "itinerary")
+    nature = sub(it, "nature")
+    days = objs(it.get("days"))
 
-    tide = nature.get("beachcombing") or {}
+    tide = sub(nature, "beachcombing")
     if tide:
         low = find_time_in_text(tide.get("tide_summary") or "", "干潮")
         rng = parse_range(tide.get("best_window"))
@@ -408,11 +431,11 @@ def check_logic(trip, rep):
                     "补干潮时刻（含数据源与日期）。")
 
     # 日出活动 vs 天文时刻
-    sun = nature.get("sunrise") or {}
+    sun = sub(nature, "sunrise")
     sr = find_time_in_text(sun.get("sunrise") or "", "日出") or parse_hm(sun.get("sunrise"))
     ss = find_time_in_text(sun.get("sunset") or "", "日落") or parse_hm(sun.get("sunset"))
     for d in days:
-        for i in d.get("items") or []:
+        for i in objs(d.get("items")):
             title = i.get("title") or ""
             rng = parse_range(i.get("time"))
             if not rng:
@@ -431,12 +454,12 @@ def check_logic(trip, rep):
                             "把活动窗对准日落前后各 1 小时。")
 
     # 满月夜观星：除非方案已明确改为月面/亮星团等抗月光目标
-    star = nature.get("stargazing") or {}
+    star = sub(nature, "stargazing")
     if star:
         m = re.search(r"(\d{1,3})\s*%", str(star.get("moon_phase") or ""))
         illum = int(m.group(1)) if m else None
         if illum is not None and illum > 50:
-            star_items = [i for d in days for i in (d.get("items") or [])
+            star_items = [i for d in days for i in objs(d.get("items"))
                           if "观星" in (i.get("title") or "")]
             if star_items:
                 # 判定"是否知情"要同时看两处：
@@ -457,14 +480,14 @@ def check_logic(trip, rep):
     # 凌晨与清晨冲突：观测结束 -> 次日日出活动开始
     star_end = None
     for d in days:
-        for i in d.get("items") or []:
+        for i in objs(d.get("items")):
             if "观星" in (i.get("title") or ""):
                 r = parse_range(i.get("time"))
                 if r:
                     star_end = max(star_end or 0, r[1])
     sun_start = None
     for d in days:
-        for i in d.get("items") or []:
+        for i in objs(d.get("items")):
             if "日出" in (i.get("title") or ""):
                 r = parse_range(i.get("time"))
                 if r:
@@ -482,7 +505,7 @@ def check_logic(trip, rep):
                 "二选一，或把日出改到行程后段。")
 
     # 踩坑指南
-    if not (trip.get("pitfalls") or []):
+    if not objs(trip.get("pitfalls")):
         rep.add("RT-L08", "minor", "逻辑", "pitfalls",
                 "踩坑指南是空的。",
                 "把调研中发现的陷阱、管制、高峰时段写进去。")

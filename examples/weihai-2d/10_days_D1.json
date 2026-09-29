@@ -13,6 +13,7 @@
             "title": "赶海（干潮 06:08）",
             "kind": "nature",
             "place": "桑沟湾滩涂",
+            "geo": { "lng": 122.5500, "lat": 37.1300 },
             "booking_status": "not_required",
             "notes": "干潮 06:08，潮位 -0.71m；滩涂裸露最广的窗口是 04:38-07:38。带雨靴、手套、小铲子、盐瓶。07:20 开始往岸上撤。"
           },
@@ -22,6 +23,7 @@
             "title": "早餐 + 回住地休整补觉",
             "kind": "meal",
             "place": "荣成市区",
+            "geo": { "lng": 122.4200, "lat": 37.1650 },
             "booking_status": "not_required",
             "notes": "四点半起床，这一觉必须补，否则下午和晚上都撑不住。"
           },
@@ -31,6 +33,7 @@
             "title": "保护区观鸟",
             "kind": "nature",
             "place": "荣成大天鹅保护区开放观鸟点",
+            "geo": { "lng": 122.5800, "lat": 37.3500 },
             "booking_status": "not_required",
             "notes": "退潮后水鸟仍在滩面觅食。只在开放观鸟点活动，不进禁入滩涂。"
           },
@@ -40,6 +43,7 @@
             "title": "海鲜午餐（市场代加工）",
             "kind": "meal",
             "place": "荣成渔港码头",
+            "geo": { "lng": 122.4500, "lat": 37.1500 },
             "booking_status": "not_required",
             "notes": "自己挑海鲜，找档口加工，加工费按斤算。节假日中午排队约 30 分钟。"
           },
@@ -49,6 +53,7 @@
             "title": "樱花湖散步 + 看日落 17:37",
             "kind": "visit",
             "place": "荣成樱花湖",
+            "geo": { "lng": 122.4250, "lat": 37.1620 },
             "booking_status": "not_required"
           },
           {
@@ -65,6 +70,7 @@
             "title": "观星（月面与亮星团）",
             "kind": "nature",
             "place": "荣成海边暗点",
+            "geo": { "lng": 122.6000, "lat": 37.2000 },
             "booking_status": "not_required",
             "notes": "月照约 75%，今晚只看月面和亮星团；深空目标改到月落之后的日期。海边夜风大，带厚外套。"
           }

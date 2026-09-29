@@ -25,14 +25,33 @@ import re
 from datetime import datetime
 from urllib.parse import quote
 
-__version__ = "1.1.0"
+__version__ = "1.3.0"
 
 __all__ = [
-    "map_url", "map_link", "place_links", "species_list", "split_species_text",
+    "map_url", "map_link", "place_links", "booking_links", "link_chips",
+    "route_url", "markers_url", "project_points", "num", "search_keyword",
+    "MARKER_LIMIT",
+    "species_list", "split_species_text",
     "star_section", "sun_section", "tide_section", "silhouette_svg",
 ]
 
 AMAP = "https://uri.amap.com/search?keyword="
+NAV = "https://uri.amap.com/navigation?"
+MARKERS = "https://uri.amap.com/marker?"
+
+# 生活服务平台的**搜索页**入口（不是 API，不需要 Key，也不需要账号）。
+# 只放实测能打开、且 URL 结构不含易失效编号的：
+#   大众点评 /search/keyword/0/0_<词>  ——  实测 200
+#   美团 i.meituan.com/s/<词>          ——  实测 200
+# 携程被有意排除：它的酒店列表要数字城市 ID（?city=7 这种），
+# 映射表会过期；关键词页又要登录。宁可少一个，别给用户一个点开是 404 的按钮。
+DIANPING = "https://www.dianping.com/search/keyword/0/0_"
+MEITUAN = "https://i.meituan.com/s/"
+
+_BOOK_PLATFORMS = (
+    ("大众点评", DIANPING),
+    ("美团", MEITUAN),
+)
 
 # ---------------------------------------------------------------- 基础工具
 
@@ -43,14 +62,26 @@ def _e(v):
 
 
 def _num(v):
+    """字符串 / 数字 → float；布尔、空值、**非有限数**一律返回 None。
+
+    nan / inf 必须挡在门外：它们能一路传进 SVG 属性变成 `cy="nan"`，
+    浏览器不报错、图却整块消失或错位——这是最难排查的一类坏图。
+    数据里写 `"inf"`、`1e999`、`null` 都会被这里收掉。
+    """
     if isinstance(v, bool):
         return None
-    if isinstance(v, (int, float)):
-        return float(v)
     try:
-        return float(str(v).strip())
-    except (TypeError, ValueError):
+        f = float(v) if isinstance(v, (int, float)) else float(str(v).strip())
+    except (TypeError, ValueError, OverflowError):
+        # 超大整数（如 JSON 里手滑写了 10**400）转 float 会 OverflowError，
+        # 它同样不属于「能画到图上」的数，一并按取不到处理。
         return None
+    return f if math.isfinite(f) else None
+
+
+def num(v):
+    """对外版 _num：能转成 float 就转，转不了返回 None（不抛异常）。"""
+    return _num(v)
 
 
 def _hm(text):
@@ -92,9 +123,15 @@ def _as_list(v):
 # ---------------------------------------------------------------- 地点链接
 
 
-def map_url(place):
-    """地点 → 高德搜索链接。只是拼字符串，页面本身不联网。"""
-    return AMAP + quote(str(place))
+def map_url(place, clean=True):
+    """地点 → 高德搜索链接。只是拼字符串，页面本身不联网。
+
+    clean=True（默认）会套上 search_keyword：`成山头（朝东无遮挡）` 只搜「成山头」。
+    逐日行程、动线一览、自然观察点全走这个函数，**搜索词只有这一处口径**，
+    否则同一个地点在不同区块会搜出不同结果。
+    """
+    text = search_keyword(place) if clean else str(place or "")
+    return AMAP + quote(str(text))
 
 
 def search_keyword(text):
@@ -115,6 +152,143 @@ def map_link(place, keyword=None):
         return ""
     return ('<a class="map" href="' + _e(map_url(keyword or place)) + '" target="_blank" '
             'rel="noopener noreferrer">' + _e(place) + "</a>")
+
+
+# ------------------------------------------------- 生活服务：点评 / 团购搜索
+
+def booking_links(keyword, kind="food"):
+    """关键词 → [(平台名, 搜索页链接)]，用来「精准查这家店 / 这个票 / 这片住宿」。
+
+    这里给的是**搜索页**：用户点进去看到的是该平台上这个词的实时结果
+    （价格、营业状态、评价都在平台自己那儿更新）。方案里写死的价格会过期，
+    链接不会——所以方案只给方向，价格让平台说。
+
+    kind 目前只影响排序，不改变链接形态；保留这个参数是为了以后按类目扩平台
+    （比如门票类想加点评以外的入口）。
+    """
+    kw = str(keyword or "").strip()
+    if len(kw) < 2:
+        return []
+    base = _BOOK_PLATFORMS if kind != "hotel" else tuple(reversed(_BOOK_PLATFORMS))
+    return [(label, tpl + quote(kw)) for label, tpl in base]
+
+
+def link_chips(links, cls="bk"):
+    """把 [(标签, 链接)] 渲染成一排小胶囊外链。空列表返回空串（不留空壳）。"""
+    items = [(str(a).strip(), str(b).strip())
+             for a, b in (links or []) if str(a).strip() and str(b).strip().startswith("http")]
+    if not items:
+        return ""
+    return ('<span class="' + _e(cls) + 's">'
+            + "".join('<a class="' + _e(cls) + '" href="' + _e(u) + '" target="_blank" '
+                      'rel="noopener noreferrer">' + _e(t) + "</a>" for t, u in items)
+            + "</span>")
+
+
+# ------------------------------------------------- 路线 / 多点（跳转外部地图）
+
+# 一次标太多点，高德页面上会挤成一团、点都点不准；十个左右是一屏能看清的上限。
+MARKER_LIMIT = 12
+
+
+def _clean_name(name):
+    """点位名进 URL 前把结构分隔符换成空格。
+
+    这些字符是 **协议本身的定界符**：`from=lon,lat,name` 用 `,` 分段、
+    参数间用 `&`、多点用 `|`。名字里带一个 `,` 或 `&`，参数就被切成两半——
+    实测 `from=...&to=...` 里起点名含 `&` 时，起点名只剩前一个字符。
+    宁可名字少几个标点，也不能给用户一个指向错地方的链接。
+    """
+    s = re.sub(r"[,|&=]+", " ", str(name or ""))
+    return " ".join(s.split())
+
+
+def _pt(x):
+    """把 (lng, lat, name) 三元组规整一下；坐标不是数就返回 None。"""
+    if not isinstance(x, (list, tuple)) or len(x) < 2:
+        return None
+    lng, lat = _num(x[0]), _num(x[1])
+    if lng is None or lat is None:
+        return None
+    name = str(x[2]).strip() if len(x) > 2 and x[2] is not None else ""
+    return (lng, lat, name)
+
+
+def markers_url(points, limit=MARKER_LIMIT):
+    """全部点位一次性标在高德地图上 → 用户"看到整条路线"最直观的一屏。
+
+    uri.amap.com/marker 的 markers 参数用 `|` 分隔，每段是 `lon,lat,name`。
+    点位太多会挤成一团，所以默认只取前 `MARKER_LIMIT` 个（调用方不必自己切片，
+    上限只有这一个真源）。
+    """
+    ps = [p for p in (_pt(x) for x in (points or [])) if p]
+    if limit:
+        ps = ps[:limit]
+    if not ps:
+        return ""
+    seg = "|".join("%.5f,%.5f,%s" % (p[0], p[1], _clean_name(p[2])) for p in ps)
+    return MARKERS + "markers=" + quote(seg)
+
+
+def route_url(points, mode="car"):
+    """按顺序规划一条路线 → 高德路径规划页。
+
+    **限制**：uri.amap.com/navigation 的 `via` 只吃**一个**途经点（官方口径），
+    所以这里只取 首 / 中 / 尾 三点（首=from，中=via，尾=to）。多于三段时链接里
+    体现不出全部顺序——这不是 bug，是接口上限；页面上会写明，并同时给「全部点位」
+    链接兜底。少于两点无法规划，返回空串。
+
+    地名先过 _clean_name：`from` / `to` / `via` 都是「经度,纬度,名称」三段式，
+    名称里带 `,` 或 `&` 会把参数切坏（起点名被截成一个字），清洗后再整串 quote。
+    """
+    ps = [p for p in (_pt(x) for x in (points or [])) if p]
+    if len(ps) < 2:
+        return ""
+    a, b = ps[0], ps[-1]
+    mid = ps[len(ps) // 2] if len(ps) > 2 else None
+    if mid is not None and mid[:2] == a[:2]:
+        mid = None
+    q = ["from=%.5f,%.5f,%s" % (a[0], a[1], _clean_name(a[2]) or "起点"),
+         "to=%.5f,%.5f,%s" % (b[0], b[1], _clean_name(b[2]) or "终点"),
+         "mode=" + (_clean_name(mode) or "car")]
+    if mid is not None:
+        q.append("via=%.5f,%.5f,%s" % (mid[0], mid[1], _clean_name(mid[2]) or "途经"))
+    return NAV + quote("&".join(q), safe="=&,")
+
+
+def project_points(points, width=640, height=300, pad=34):
+    """经纬度 → 画布坐标（等距圆柱投影，够画示意图了）。
+
+    返回 [(x, y, lng, lat, name)]。经度按 cos(纬度) 压缩，免得高纬度地方被拉宽。
+    整批点重合（或只有一个点）时居中摆放，不做除零。
+    注意 y 轴要翻过来——纬度越大越靠北，屏幕上是越靠上。
+    """
+    ps = [p for p in (_pt(x) for x in (points or [])) if p]
+    if not ps:
+        return []
+    lngs = [p[0] for p in ps]
+    lats = [p[1] for p in ps]
+    lo_lng, hi_lng = min(lngs), max(lngs)
+    lo_lat, hi_lat = min(lats), max(lats)
+    mid_lat = (lo_lat + hi_lat) / 2.0
+    k = max(math.cos(math.radians(mid_lat)), 0.2)   # 经度收缩系数
+    iw, ih = max(width - 2 * pad, 1), max(height - 2 * pad, 1)
+    # 全部点同坐标：没有可用跨度，直接摆中间。别让它落进下面的除零保护里，
+    # 那会算出贴边的怪位置（看起来像渲染错了）。
+    if (hi_lng - lo_lng) < 1e-6 and (hi_lat - lo_lat) < 1e-6:
+        return [(pad + iw / 2.0, pad + ih / 2.0, p[0], p[1], p[2]) for p in ps]
+    span_x = max((hi_lng - lo_lng) * k, 1e-9)
+    span_y = max(hi_lat - lo_lat, 1e-9)
+    scale = min(iw / span_x, ih / span_y)
+    # 缩放后居中
+    ox = pad + (iw - span_x * scale) / 2.0
+    oy = pad + (ih - span_y * scale) / 2.0
+    out = []
+    for lng, lat, name in ps:
+        x = ox + (lng - lo_lng) * k * scale
+        y = oy + (hi_lat - lat) * scale       # 北在上
+        out.append((x, y, lng, lat, name))
+    return out
 
 
 def _split_places(text):
@@ -143,7 +317,9 @@ def place_links(value, sep=""):
             name, note = str(item), ""
         if not name:
             continue
-        one = map_link(name, search_keyword(name))
+        # 搜索词由 map_url 内部统一剥（见 map_url / search_keyword），
+        # 这里不要再剥一遍——两份口径迟早会走岔。
+        one = map_link(name)
         if note:
             one += '<span class="pl-note">' + _e(note) + "</span>"
         chunks.append('<span class="pl-item">' + one + "</span>")

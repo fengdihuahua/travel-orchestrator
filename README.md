@@ -34,7 +34,7 @@
 
 | 能力 | 说明 |
 |---|---|
-| **需求访谈** | 开场不是问卷，是面试：一次只问一个问题（每题给 2-4 个具体选项、推荐项排第一），能自己查到的事实（日出时刻、潮汐、月相、票价、车次）先去查、把数字嵌进问题里再问。五层推进（意图→硬约束→玩法口味→自然观察专项→风险底线），收尾出「需求共识」等用户确认才动手；含糊答案追问到底，前后矛盾直接顶回去。协议见 `references/intake-interview.md` |
+| **需求访谈** | 开场不是问卷，是面试：**一次一屏**（一屏只问同一层的 2-4 个相关子问题，每题给 2-4 个具体选项、推荐项排第一），能自己查到的事实（日出时刻、潮汐、月相、票价、车次）先去查、把数字嵌进问题里再问。五层推进（意图→硬约束→玩法口味→自然观察专项→风险底线），整场 4-5 屏，收尾出「需求共识」等用户确认才动手；含糊答案追一层、追不出就给两个选项，前后矛盾直接顶回去。协议见 `references/intake-interview.md` |
 | **红方复核** | 交付前由质疑方逐项挑刺，23 条规则 + 六轮人工质疑清单，阻断项清零才放行。复核属生成过程，**不进交付物**；未解决的风险改写进「踩坑指南」 |
 | **反幻觉溯源** | 每个具体数字都要绑定来源与状态，来源超 30 天自动报警，未溯源的不得写成确定值 |
 | **自然观察专项** | 观鸟 / 观星 / 日出日落 / 赶海 四项（火烧云评分附在日出卡上）：**嵌在访谈 L3 里问**，先跑可行性核查，再按"条件好 / 条件一般 / 做不到"三档如实告诉用户，做不到的直接给替代，不硬排玩不到的项目 |
@@ -43,6 +43,8 @@
 | **日出日落** | 精确到分钟，含黄金时刻、蓝调时刻、晨昏蒙影；附太阳轨迹色带与**火烧云指数**（自建评分：云量分层 + 通透度 + 水汽 + 气溶胶，0-3 级） |
 | **赶海** | 潮汐极值提取（抛物线插值到分钟级）、赶海窗口计算、涨潮撤离提醒 |
 | **常规编排** | 需求澄清、灵感推荐、实时调研、天气研判、行程、美食、预算、待办、踩坑 |
+| **动线图** | 按真实经纬度画每天一条的路线示意图（离线 SVG，纯 CSS 无脚本），标号与逐日停靠点一一对应；配两个跳转：**在高德看全部点位** / **规划整条路线** |
+| **预订入口** | 要订的门票/住宿/车票挂上大众点评与美团搜索入口，点进去看当天报价。**不接要 Key 的接口，也不写死房价票价**（写死就会过期） |
 | **同源交付** | 一份数据渲染 Markdown 攻略 + 单文件 HTML 攻略 |
 | **视觉规范** | B 站配色 × 圆体少女感 × 描边贴纸：9 节固定顺序、六色章节循环、内联 SVG 小图标与小贴图、封面弹幕条与珠光星点、满页闪烁星点、四个专项主题动效。纯 CSS 实现，无脚本无外链 |
 | **设计文档** | `references/design-system.md`：设计上下文、色板、排版、图形语言、动效、信息架构、交互、可访问性、打印规则、自检清单 |
@@ -138,8 +140,9 @@ python scripts/build_trip.py render travel-plan/<trip_id>
 
 ## 实际测试案例
 
-`examples/weihai-2d/` 里是一份完整的真实案例：北京 → 威海 2 天，2 人，预算 2500，
-主要诉求是赶海和观鸟。
+仓库的 `examples/weihai-2d/` 里是一份完整的真实案例：北京 → 威海 2 天，2 人，预算 2500，
+主要诉求是赶海和观鸟。（该示例在 skill 目录下占 2 层子目录，超过平台「根目录 / 二级目录 / 文件」的限制，
+所以只在[源码仓库](https://github.com/fengdihuahua/travel-orchestrator)里；上架包不含它。）
 
 **案例里最有价值的部分不是方案本身，是它被改过的痕迹。**
 
@@ -155,11 +158,11 @@ python scripts/build_trip.py render travel-plan/<trip_id>
 
 改完之后红方复核结论为**通过（0 阻断 / 0 严重 / 0 提醒）**，渲染产物通过一致性检查。
 
-`tests/run_tests.py` 里有 133 条断言，包含一份故意写坏的对照组，
+`tests/run_tests.py` 里有 233 条断言，包含一份故意写坏的对照组，
 验证这些规则真的能抓出问题，而不是只在文档里写着。
 
 ```bash
-python tests/run_tests.py     # 133 条断言，不需要网络
+python tests/run_tests.py     # 233 条断言，不需要网络
 ```
 
 ---
@@ -174,11 +177,13 @@ travel-orchestrator/
 ├── CHANGELOG.md
 ├── LICENSE
 ├── references/
-│   ├── intake-interview.md       # 需求访谈协议（S1 执行手册：五层决策树/追问对照表/共识模板）
+│   ├── intake-interview.md       # 需求访谈协议（S1 执行手册：一屏一层/追问对照表/共识模板）
+│   ├── data-schema.md            # 行程数据结构（字段名对照 + 三个高频坑）
 │   ├── nature-knowledge.md       # 观鸟/观星/日出/赶海领域知识
 │   ├── nature-apis.md            # 接口清单、算法、降级规则、已停用接口
 │   ├── red-team-checklist.md     # 红方六轮质疑清单
 │   ├── design-system.md          # UI/UE 设计规范（色板/排版/动效/信息架构）
+│   ├── repo-layout.md            # 仓库结构与维护说明（文件清单、打包排除项、维护者工具）
 │   └── writing-style.md          # 去 AI 味写作规范
 ├── assets/
 │   └── handbook.css              # 交付物样式表（渲染时内联，保持单文件离线）
@@ -189,14 +194,21 @@ travel-orchestrator/
 │   ├── nature_widgets.py         # 自然专项交互件（星图/月相盘/天光条/潮汐点选，纯内联 SVG）
 │   ├── red_team.py               # 红方复核规则引擎（23 条规则）
 │   └── render_plan.py            # 同源渲染 MD + 离线 HTML 攻略
-├── examples/weihai-2d/           # 开箱示例（13 个分片 + 渲染产物，分片平铺在目录里）
-├── tests/                        # 回归测试与对照夹具
-└── tools/                       # 开发工具（不进安装目录）
+├── examples/weihai-2d/           # 完整示例（13 个分片 + 渲染产物）★ 仅仓库，不进上架包
+├── tests/                        # 回归测试与对照夹具 ★ 仅仓库，不进上架包
+└── tools/                       # 开发工具 ★ 仅仓库，不进上架包/安装目录
     ├── install.py                # 安装/同步到 skill 目录
     ├── verify_all.py             # 编译+测试+红方+渲染+一致性 一键跑
     ├── shot.py                   # 无头 Chrome 截图/测量（--print 可核对打印版式）
     └── probe.py                  # 盒模型探测，定位"看着不对"的元素
 ```
+
+> ★ 上架包只含 `SKILL.md`、`README.md`、`USAGE.md`、`CHANGELOG.md`、`LICENSE`、
+> `workbuddy.json`，加 `references/` `assets/` `scripts/` 三个一级目录，共 **21 个文件（约 229 KB）**。
+> 开放平台只支持「根目录 / 二级目录 / 文件」，`examples/weihai-2d/x.json` 属三层会被拒，
+> 所以示例与测试只在仓库里，`pack.py` 打包时排除。
+> 排除清单是**单一真源**（`tools/pack.py` 的 `EXCLUDE_DIRS`），`install.py` 直接复用它——
+> 早先两份清单各写一遍，漏排了 `generated-images/`（6.2 MB 的配图），包一打就顶穿 3 MB 上限。
 
 ---
 
@@ -204,7 +216,8 @@ travel-orchestrator/
 
 ## 上架到 SkillHub
 
-开放平台收的是 zip 包（不超过 3MB），包内必须有 `SKILL.md`，目录层级不超过两层。
+开放平台收的是 zip 包（不超过 3MB），包内必须有 `SKILL.md`，且 skill 目录下最多 1 层子目录
+（平台原文：只支持「根目录 / 二级目录 / 文件」）。
 `SKILL.md` 的 frontmatter 必填项仓库里已经填好，回归测试会盯着不让它们漂：
 
 | 字段 | 说明 |
@@ -213,6 +226,7 @@ travel-orchestrator/
 | `description_zh` / `description_en` | 中英简介，与 `workbuddy.json` 保持同步 |
 | `version` | 版本号，与页脚版本标记一致 |
 | `author` | 署名，本项目署项目名 `travel-orchestrator`，与 `LICENSE` 著作权人同口径 |
+| `category` | 分类（官方字段表标为必填，漏了上传解析会失败） |
 | `display_name` / `display_name_en` | 市场展示名 |
 
 打包前自检：
@@ -224,8 +238,11 @@ python tools/install.py         # 同步到 skill 目录（增量，不会删空
 ```
 
 `tools/pack.py` 会盯住三件平台约束：包内有 `SKILL.md`、体积不超 3 MB、
-**目录不超两层**（示例把分片平铺在 `examples/weihai-2d/` 就是为了不越这一层）。
-也可以用官方 `skill-creator/scripts/package_skill.py`，但它不做这些检查。
+**结构符合「根目录 / 二级目录 / 文件」**（skill 目录下最多一层子目录）。
+包内排除 `tools/`、`tests/`、`examples/`（`examples/weihai-2d/` 在 skill 目录下是 2 层子目录，
+超过 1 层上限）、`_shots/` 与 `generated-images/`（截图为 6 MB+ 的 PNG，会把包顶穿 3 MB 上限），
+以及 `.gitignore`、`.gitattributes` 这类仓库自用文件。
+也可以用官方 `skill-creator` 附带的 `package_skill.py`，但它不做这些检查。
 
 上传入口在客户端【专家·技能·连接器】→【技能】→ 市场右上角【添加技能】，
 或开放平台 `open.workbuddy.cn` 的【发布新技能】。**别把调试时的 API Key、

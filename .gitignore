@@ -9,7 +9,19 @@ Thumbs.db
 _shots/
 _tmp/
 
+# 宿主/skill 工作目录：本地记忆与打包产物（dist/），不进仓库
+.workbuddy/
+
+# 本地内部材料（活动文案、待办笔记等不对外内容）：只留本地，不进公开仓库。
+# 同名项在 `tools/pack.py` 的 EXCLUDE_FILES 里也有一份，两边都留着当防线。
+SUBMISSION.md
+
 # 本地旅行数据不入库（含个人信息与行程）
 travel-plan/
 *.local.json
 .env
+
+# AI 生图的原始素材：本地保留用于重跑 tools/icon.py 生成市场头像。
+# 不入库的两个理由：仓库里本来就没有任何图片（_shots/ 也是忽略的），
+# 而这几张草稿合计 6.2 MB，进库只会让 clone 变慢；市场头像单独上传即可。
+generated-images/

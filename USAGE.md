@@ -9,7 +9,7 @@
 主流程十个模块，加上一个交付前的独立质量门：
 
 ```
-S1  需求访谈 ⭐        一次一问逐层拷问（意图→硬约束→口味→自然专项→底线），先出「需求共识」
+S1  需求访谈 ⭐        一次一屏（一屏只问一层，整场 4-5 屏），先出「需求共识」
 S2  灵感与目的地推荐    没定目的地时给 3-5 个有真实差异的候选
 S3  实时调研          门票、预约、交通、政策，逐条记来源与日期
 S4  天气研判          规划期气候 + 出发前逐日预报
@@ -115,6 +115,10 @@ render_plan.write_outputs("travel-plan/<id>", force=True)  # 结构不过也强�
 ## 3. 行程数据结构（分片）
 
 单一业务数据源。MD 和 HTML 都是它的表达层，不各自维护内容。
+
+> **面向生成过程的一页速查在 `references/data-schema.md`**（字段名对照表、缺失判定、
+> `days+` / `companions` / `item_id` 三个高频坑）。本节是给维护者的完整版；
+> 写数据时看那一页就够，且校验报错会直接指出该改哪个分片文件。
 
 **数据以分片形态存在**：按文件名顺序合并，每片几 KB（写不坏），
 渲染 / 复核 / 校验都直接读目录就地合并，不落中间大文件。
@@ -454,8 +458,11 @@ rep.add("RT-L09", "major", "逻辑", "目标行",
 ### 8.2 改需求访谈（S1）
 
 提问口径全在 `references/intake-interview.md`，`SKILL.md` 的 S1 只是摘要：**要改问法改那个文件**，
-不要往 SKILL.md 里堆问题清单。改的时候守住四条硬规则：一次一问、每题带推荐项、
-能自己查到的事实不拿去问用户、共识确认前不写方案。
+不要往 SKILL.md 里堆问题清单。改的时候守住五条硬规则：一屏一层、每题带推荐项、
+能自己查到的事实不拿去问用户、共识确认前不写方案、同一条追问最多追一层。
+
+数据结构的写法在 `references/data-schema.md`（字段名对照 + `days+` / `companions` / `item_id`
+三个高频坑）：**改数据之前先看那一页**，字段名写错的表现是"生成成功、渲染出来是空白"。
 
 落盘与呈现的分工（容易改错的地方）：
 
@@ -477,7 +484,7 @@ rep.add("RT-L09", "major", "逻辑", "目标行",
   **改样式只改这个文件**，不要往 `render_plan.py` 里塞 CSS。
 - **结构**：`render_plan.py` 的 `_cover` / `_nature` / `_nature_card` / `_days` / `_checklist` 等函数，
   小贴图与章节贴纸映射（`STICKER` / `SECTION_STICKER` / `NATURE_STICKER`）也在该文件里。
-- **自然专项的四个交互件**：单独放在 `scripts/nature_widgets.py`（v1.0.1），
+- **自然专项的四个交互件**：单独放在 `scripts/nature_widgets.py`（v1.2.0），
   `render_plan._nature()` 只是调用它。要改星图/潮汐图/鸟卡/火烧云表的样式和结构，
   改这个文件，不要塞回 `render_plan.py`。它对外只吐内联 SVG + HTML，**不含脚本**。
   - 星图/月相是真的天文计算（`_jd_utc` → `_gmst_hours` → `_altaz`），
@@ -507,7 +514,7 @@ rep.add("RT-L09", "major", "逻辑", "目标行",
 
 ```bash
 python -m py_compile scripts/*.py      # 编译
-python tests/run_tests.py              # 133 条断言
+python tests/run_tests.py              # 233 条断言
 python scripts/red_team.py check <方案目录>            # 红方复核，有阻断项返回 1
 python scripts/render_plan.py <方案目录> --check       # 产物一致性 + 无脚本/无远程资源
 python scripts/nature_forecast.py selftest            # 接口健康度
