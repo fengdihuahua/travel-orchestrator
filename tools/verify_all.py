@@ -63,7 +63,8 @@ def main(argv=None):
     try:
         bad += run("1. 编译", ["-m", "py_compile", "scripts/render_plan.py",
                                "scripts/nature_widgets.py", "scripts/red_team.py",
-                               "scripts/nature_forecast.py", "scripts/build_trip.py"],
+                               "scripts/nature_forecast.py", "scripts/build_trip.py",
+                               "scripts/doctor.py", "scripts/poster_ai.py"],
                    tail=4)
         bad += run("2. 回归测试", ["tests/run_tests.py"], tail=6)
         bad += run("3. 红方复核（示例方案，直接读目录）",
