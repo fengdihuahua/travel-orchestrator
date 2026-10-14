@@ -50,7 +50,7 @@ travel-orchestrator/
 | 工具 | 作用 |
 |---|---|
 | `verify_all.py` | 验收流水线：编译 → 测试 → 红方 → 渲染 → 一致性 → 示例同步。`--refresh` 顺带刷新示例产物 |
-| `install.py` | 源码 → 安装目录增量同步 |
+| `install.py` | 源码 → 宿主 skill 目录增量同步（`--host workbuddy\|kimi`，默认 workbuddy） |
 | `pack.py` | 打包上架 zip（排除规则见上） |
 | `shot.py` | 截图（`--measure` 量元素、`--offsets` 滚动到指定位置、`--dsf 2` 看清小字） |
 | `probe.py` | 列出元素的盒模型/display，定位错位 |

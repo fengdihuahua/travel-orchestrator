@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-install.py · 把本项目安装（或更新）到 WorkBuddy 的 skill 目录
+install.py · 把本项目安装（或更新）到某个宿主的 skill 目录
 
 项目目录（本仓库）是可编辑的源码；安装目录是运行时副本。
 改代码在项目目录改，改完跑一次这个脚本同步过去。
+
+支持的宿主（--host）：
+- workbuddy：%USERPROFILE%\\.workbuddy\\skills\\travel-orchestrator
+- kimi：     %APPDATA%\\kimi-desktop\\daimon-share\\daimon\\skills\\travel-orchestrator
+  （Kimi Work 的托管 skill 目录；装完在新会话的技能索引里出现）
 
 为什么是"增量同步"而不是"删掉重装"
 ------------------------------------
@@ -15,14 +20,10 @@ install.py · 把本项目安装（或更新）到 WorkBuddy 的 skill 目录
 所以改成：逐个文件比对内容，不同的才覆盖；源码里已删掉的文件才从安装目录移除。
 
 用法：
-    python tools/install.py                 # 装到默认位置
-    python tools/install.py --dest <目录>    # 装到指定位置
-    python tools/install.py --dry-run        # 只看会做什么，不动文件
-
-默认目标：
-    Windows  %USERPROFILE%\\.workbuddy\\skills\\travel-orchestrator
-    macOS /
-    Linux    ~/.workbuddy/skills/travel-orchestrator
+    python tools/install.py                      # 装到 workbuddy 默认位置
+    python tools/install.py --host kimi          # 装到 kimi 的 skill 目录
+    python tools/install.py --dest <目录>         # 装到指定位置（--host 无关）
+    python tools/install.py --dry-run             # 只看会做什么，不动文件
 """
 from __future__ import annotations
 
@@ -44,7 +45,12 @@ sys.path.insert(0, HERE)
 from pack import EXCLUDE_DIRS, EXCLUDE_FILES, EXCLUDE_SUFFIX  # noqa: E402
 
 
-def default_dest():
+def default_dest(host):
+    if host == "kimi":
+        # Kimi Work 桌面版（Windows）的托管 skill 根目录
+        base = os.environ.get("APPDATA") or os.path.join(os.path.expanduser("~"), "AppData", "Roaming")
+        return os.path.join(base, "kimi-desktop", "daimon-share", "daimon", "skills", SKILL_NAME)
+    # workbuddy（默认）
     return os.path.join(os.path.expanduser("~"), ".workbuddy", "skills", SKILL_NAME)
 
 
@@ -80,11 +86,14 @@ def main(argv=None):
             stream.reconfigure(encoding="utf-8", errors="replace")
 
     ap = argparse.ArgumentParser(description="安装 travel-orchestrator 到 skill 目录")
-    ap.add_argument("--dest", default=default_dest(), help="目标目录")
+    ap.add_argument("--host", choices=("workbuddy", "kimi"), default="workbuddy",
+                    help="目标宿主（决定默认安装位置），默认 workbuddy")
+    ap.add_argument("--dest", default=None, help="目标目录（给了就 --host 无关）")
     ap.add_argument("--dry-run", action="store_true", help="只打印计划，不写文件")
     args = ap.parse_args(argv)
 
-    dest = os.path.abspath(args.dest)
+    dest = os.path.abspath(args.dest or default_dest(args.host))
+    print(f"宿主: {args.host}")
     print(f"源  : {ROOT}")
     print(f"目标: {dest}")
 
@@ -138,7 +147,7 @@ def main(argv=None):
     if bad:
         print("x 同步后仍不一致：" + "、".join(bad), file=sys.stderr)
         return 1
-    print(f"完成，{len(files)} 个文件三方一致。若 WorkBuddy 已在运行，重启会话后生效。")
+    print(f"完成，{len(files)} 个文件三方一致。若宿主已在运行，重启会话后生效。")
     return 0
 
 

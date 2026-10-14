@@ -1,5 +1,16 @@
 # 更新记录
 
+## v4.16.0（2026-10-14）
+
+**多宿主通用化：不止 WorkBuddy，也能在 Kimi 里维护与使用。**
+
+- 项目迁出 WorkBuddy 工作区，成为独立源码项目（开发态在 Kimi 项目里维护，与宿主解耦）。
+- `tools/install.py` 支持 `--host workbuddy|kimi`：workbuddy 装到 `~/.workbuddy/skills/`，
+  kimi 装到 `%APPDATA%/kimi-desktop/daimon-share/daimon/skills/`；默认仍为 workbuddy。
+- README / `references/repo-layout.md` 的安装与打包说明改为多宿主口径。
+- **撤掉「交付前必问海报」的强制对话门**（SKILL.md S8 与交付物两处）：海报本来就是可选项，
+  skill 不该用硬规则脚本化每一次对话。改为「用户主动要、或顺口提一句被接住才做」。
+
 ## v4.15.4（2026-10-14）
 
 **生图提示词压到 2000 字内（`poster_ai.py` v1.7.5）。**
