@@ -4,7 +4,8 @@
 doctor.py — travel-orchestrator 环境与依赖自检 (v1.0.0)
 
 用途：一条命令回答"为什么我这边跑不起来"，把 90% 的报错挡在门口。
-检查项：Python 版本、标准库、脚本能否编译、目录与写权限、各接口连通性、eBird Token。
+检查项：Python 版本、标准库、脚本能否编译、目录与写权限、各接口连通性（含观鸟数据源
+iNaturalist / GBIF —— 都免注册）。
 
 用法：
   python scripts/doctor.py
@@ -141,24 +142,12 @@ def main(argv=None):
         problems.append("临时目录不可写：" + str(e)[:60])
         print("    [FAIL] 临时目录不可写: " + str(e)[:60])
 
-    # ---- 4. eBird Token
-    print("\n[4] eBird Token（可选）")
-    tok = None
-    for k in ("EBIRD_API_TOKEN", "EBIRD_TOKEN"):
-        if os.environ.get(k, "").strip():
-            tok = os.environ[k].strip()
-            print("    [OK]   从环境变量 " + k + " 读到 Token（" + tok[:4] + "****）")
-            break
-    if not tok:
-        print("    [ -- ] 未配置。不影响使用：观鸟默认走免注册的 iNaturalist。")
-        print("           需要珍稀鸟种提醒/官方热点库时，申请免费 Token：")
-        print("           https://ebird.org/api/keygen")
 
-    # ---- 5. 网络连通性
+    # ---- 4. 网络连通性
     if args.quick:
-        print("\n[5] 网络连通性：已按 --quick 跳过")
+        print("\n[4] 网络连通性：已按 --quick 跳过")
     else:
-        print("\n[5] 数据接口连通性")
+        print("\n[4] 数据接口连通性")
         lat, lng = 37.5091, 122.1136
         checks = [
             ("日出日落", "https://api.sunrise-sunset.org/json?lat=%s&lng=%s&formatted=0" % (lat, lng), True),
@@ -171,8 +160,6 @@ def main(argv=None):
             ("观鸟-物种", "https://api.inaturalist.org/v1/taxa/autocomplete?q=%E9%BB%91%E5%B0%BE%E9%B8%A5", True),
             ("观鸟-备份", "https://api.gbif.org/v1/occurrence/search?taxonKey=212&year=2025,2026&limit=1", True),
         ]
-        if tok:
-            checks.append(("eBird", "https://api.ebird.org/v2/data/obs/geo/recent?lat=%s&lng=%s&dist=25&back=7" % (lat, lng), True))
         for name, url, need in checks:
             ok, note = probe(name, url, need_key=need)
             print("    [%s] %s %s" % ("OK  " if ok else "FAIL", pad(name, 16), note))

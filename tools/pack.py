@@ -55,12 +55,15 @@ SIZE_LIMIT = 3 * 1024 * 1024
 
 # 目录排除清单。**这里是唯一的真源**，install.py 的 EXCLUDE_DIRS 必须与它逐项一致——
 # 两份清单各改一份是上一版踩过的坑（pack 排除了 tools/，install 没排，装完目录里多出开发脚本）。
-# 分三类：
+# 分四类：
 #   ① 开发用：tools/ tests/ examples/（examples 还额外违反平台的层级限制，见下）
-#   ② 本地状态：.git/ .workbuddy/
+#   ② 本地状态：.git/ .workbuddy/ travel-plan/
 #   ③ 截图与配图产物：_shots/ generated-images/（几 MB 的 PNG，一旦漏排就顶穿 3 MB 上限）
+#   ④ 临时目录：_tmp/
+# travel-plan/ 是跑出来的行程数据（含个人出行信息），.gitignore 里也排除了它；
+# 它还是三层结构（travel-plan/<trip>/parts/*.json），漏排会直接违反平台层级限制。
 EXCLUDE_DIRS = {"__pycache__", ".git", ".workbuddy", "_tmp", "_shots",
-                "generated-images", "tools", "tests", "examples"}
+                "generated-images", "tools", "tests", "examples", "travel-plan"}
 # SUBMISSION.md 是本地内部材料（活动文案、待办笔记），不是技能内容，不进包
 EXCLUDE_FILES = {".gitignore", ".gitattributes", ".DS_Store", "SUBMISSION.md"}
 EXCLUDE_SUFFIX = (".pyc", ".pyo", ".bak", ".tmp", ".out")
