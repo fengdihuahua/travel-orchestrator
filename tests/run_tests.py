@@ -6,7 +6,7 @@ run_tests.py · travel-orchestrator 回归测试
 跑法：
     python tests/run_tests.py
 
-覆盖十三件事：
+覆盖十四件事：
   1. 干净的方案不该被红方挑出阻断项或严重项
   2. 故意写坏的方案必须被抓出对应的规则编号
   3. 赶海窗口的安全规则（RT-L01 / RT-L04）单独验证
@@ -20,6 +20,8 @@ run_tests.py · travel-orchestrator 回归测试
  11. v4.9.0 地图动线：离线 SVG 示意图、标号与停靠点一致、跳外部地图、空条目不成行、标点不断行
  12. v4.10.0 坏数据防线：元素级类型校验、geo 写法容错、nan/inf 不进图、URL 参数不被地名切断、
      渲染器与红方都不假设上游校验过（坏数据最多少显示一条，不炸 traceback）
+ 13. AI 一层绘制海报（poster_ai）：同坐标异名归并成一个点、代表名取最通用写法、
+     骨架不写数字、题签同一地点不用两个名字、一个地点最多两行且画面里不出现序号
 
 不需要网络，不需要任何第三方库。
 """
@@ -579,6 +581,10 @@ def test_tools():
     # ---- ③ 开发工具不进上传包（与 install.py 的排除口径一致）。
     #         早先 pack.py 漏了 tools/，5 个开发脚本混进了上架包里
     check("打包排除 tools/（与安装口径一致）", '"tools"' in dirs_line)
+    # travel-plan/ 是跑出来的行程数据（含个人出行信息），而且它是三层结构
+    # （travel-plan/<trip>/parts/*.json），漏排会直接把上架包顶成"层级超限"的废包
+    check("打包排除 travel-plan/（行程数据不进上架包）",
+          '"travel-plan"' in dirs_line)
     check("断言取到的是真实赋值行", "{".join(dirs_line.split("{")[:1]) == dirs_line)
 
     # ---- ④ 上架包必须符合平台结构「根目录 / 二级目录 / 文件」，
@@ -764,7 +770,7 @@ def test_routemap():
     mk = nw.markers_url([(122.4, 37.1, "A"), (122.5, 37.2, "B")])
     check("多点标记链接用 | 连接", "uri.amap.com/marker" in mk and "%7C" in mk, mk[:70])
 
-    # ---- ③ 渲染出的动线区块：图在、链接在、编号与列表对得上
+    # ---- ③ 渲染出的动线区块：不画路线图、不给海报入口、编号与列表对得上
     tmp = tempfile.mkdtemp(prefix="to-route-")
     try:
         out = render_plan.write_outputs(GOOD, out_dir=tmp)
@@ -772,29 +778,26 @@ def test_routemap():
             htm = f.read()
         with open(out["md"], encoding="utf-8") as f:
             md = f.read()
-        check("HTML 有 SVG 动线示意图", 'class="rmap"' in htm and "<polyline" in htm)
-        check("示意图带无障碍标签", 'aria-label="行程动线示意图"' in htm)
-        check("图上每个点带名称 tooltip", htm.count("<title>") >= 5)
+        check("HTML 不再渲染行程轨迹图",
+              'class="rmap"' not in htm and 'class="rseg"' not in htm
+              and 'aria-label="行程动线示意图"' not in htm)
+        # 上次的漏法：元素删了、CSS 忘删，样式表里还挂着一整套 .rmap/.rcompass…
+        check("轨迹图的 CSS 也一并删净（不是只删元素）",
+              not [k for k in (".rmap", ".rseg", ".rdot", ".rway", ".rpin", ".rnum",
+                               ".rlbl", ".rtick", ".rcompass", ".rlegend", ".rday",
+                               ".rmapcap") if k in htm])
+        check("HTML 有逐日停靠点列表", 'class="rstops"' in htm and 'class="rnode"' in htm)
         check("给了「看全部点位」按钮", "uri.amap.com/marker" in htm and "看全部点位" in htm)
         check("给了「规划整条路线」按钮", "uri.amap.com/navigation" in htm and "规划整条路线" in htm)
-        check("写明是示意、非导航路径", "非导航路径" in htm)
+        check("HTML 不出现导览海报入口",
+              "导览海报" not in htm and "-poster.html" not in htm)
+        check("写明本页不含路线图", "本页不含路线图" in htm)
         check("MD 也有动线一览", "动线一览" in md and "uri.amap.com/marker" in md)
 
         import re as _re
-        mapnums = _re.findall(r'<title>(\d+)\. ', htm)
         rownums = _re.findall(r'<i>(\d+)</i>', htm)
-        check("地图标号都出现在下方停靠点里",
-              set(mapnums) <= set(rownums), "地图 %s / 列表 %s" % (mapnums, rownums))
         check("停靠点按天去重且跨天连续编号",
               rownums == [str(i) for i in range(1, len(rownums) + 1)], str(rownums))
-        # 重合点必须被摊开，否则两个数字叠在一起看不清。
-        # 只在动线图那一段里数圆点——星图、潮汐图也有 <circle>，别把它们算进来。
-        seg = htm[htm.find('class="rmap"'):]
-        seg = seg[:seg.find("</svg>")]
-        cxys = _re.findall(r'<circle cx="([\d.]+)" cy="([\d.]+)"', seg)
-        check("序号点没有完全重合（重合点已摊开）",
-              len(set(cxys)) == len(cxys) and len(cxys) >= 5,
-              "%d 个点 / %d 个位置" % (len(cxys), len(set(cxys))))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
@@ -967,6 +970,311 @@ def test_hardening():
         shutil.rmtree(tmp2, ignore_errors=True)
 
 
+def test_booking_links():
+    """v4.11.0 预订入口按品类直达（用户反馈：别再丢到平台首页）。
+
+    实测口径（2026-10-09）：门票→去哪儿门票列表、火车票（带 from/to/date）→
+    携程车次列表、住宿（带 city）→携程订房页；参数不齐不给死链，给官方兜底。
+    """
+    print("\n用例 13 · 预订入口按品类直达（深链结构 / 缺参兜底）")
+    t = nw.booking_links("成山头景区门票", "ticket")
+    check("门票首条是去哪儿门票", t and "touch.piao.qunar.com" in t[0][1], str(t[:1]))
+    check("门票仍带点评/美团兜底", len(t) == 3)
+    tr = nw.booking_links("", "train", {"from": "北京", "to": "上海",
+                                        "date": "2026-10-15"})
+    check("火车票给了参数直达携程车次列表",
+          tr and "trains.ctrip.com/webapp/train/list" in tr[0][1]
+          and "dStation=" in tr[0][1] and "aStation=" in tr[0][1]
+          and "dDate=2026-10-15" in tr[0][1], str(tr[:1]))
+    tr2 = nw.booking_links("", "train", {"from": "北京"})
+    check("火车票缺参数给 12306 兜底而非死链",
+          tr2 and "12306.cn" in tr2[0][1], str(tr2[:1]))
+    h = nw.booking_links("近海民宿", "hotel", {"city": "威海",
+                                               "checkin": "2026-10-01"})
+    check("酒店带 city 出携程订房页", any("m.ctrip.com/webapp/hotel" in u
+                                        and "cityname=" in u and "checkin=" in u
+                                        for _l, u in h), str(h[:1]))
+    check("酒店缺 city 只留搜索兜底",
+          not any("ctrip" in u for _l, u in nw.booking_links("近海民宿", "hotel")))
+    f = nw.booking_links("鲅鱼水饺", "food")
+    check("美食保持点评+美团不变", len(f) == 2 and "dianping.com" in f[0][1])
+    check("空关键词不产链接", nw.booking_links("", "food") == [])
+
+
+
+def test_poster_ai():
+    """AI 一层绘制海报（poster_ai）的两条位置/文字硬约束回归。
+
+    1. **同坐标 = 同一个地点**：行程里同一个地点写成不同名字是常态
+       （「东营市区」/「东营市区东城」、「黄河口生态旅游区南门」/「远望楼码头」），
+       必须并成一个点。不并的话 `nw.project_route` 那道去重叠会把它们推开成两个点，
+       各画一个印、各占一个文字框 —— 实测就是这个原因让「1 2 3 4 5」糊成一团。
+    2. **骨架不写数字**：编号只写在文字里。模型画多行小字与分配编号不可靠
+       （会漏、会重复、会串位）。骨架角上那两个标方位的字也不能进提示词的「必写字」清单，
+       否则会被原样画进成品。
+    3. **画面里不出现序号**：一个地点最多两行「地名 ｜ 时段 ｜ 详情」，读者按地名对号。
+       模型画序号本就不可靠（会漏、会重复、会串位），干脆不编号。
+    """
+    import poster_ai
+
+    # 合成一份最小行程：4 个真实地点，其中 A 镇有三个名字/三次出现，但坐标相同
+    ll = [
+        ("A 镇东门", 119.16, 37.76, "d1-01", "08:00", "nature", "观鸟"),
+        ("A 镇", 119.16, 37.76, "d1-02", "09:00", "nature", "鸟浪"),
+        ("B 湾", 119.10, 37.87, "d1-03", "15:00", "nature", "赶海"),
+        ("C 堤", 118.80, 37.86, "d1-04", "22:00", "nature", "拍星空"),
+        ("D 城", 118.66, 37.45, "d1-05", "23:00", "rest", "回酒店"),
+        ("A 镇", 119.16, 37.76, "d1-06", "23:40", "meal", "夜宵：水煎包"),
+    ]
+    items = [{"item_id": i[3], "place": i[0], "time": i[4], "kind": i[5],
+              "title": i[6], "geo": {"lng": i[1], "lat": i[2]}} for i in ll]
+    trip = {"request": {"destination": {"name": "东营"}},
+            "itinerary": {"days": [{"day_id": "D1", "date": "2026-10-16",
+                                    "weekday": "周五", "title": "试排", "items": items}]}}
+
+    d, _items, names, seqs, rows_of = poster_ai.collect(trip, 1)
+    check("同坐标异名归并成一个地点（6 条 → 4 个点）", len(names) == 4, str(names))
+    check("被归并的序号集中到同一个点下",
+          sorted(seqs.get("A 镇", [])) == [1, 2, 6], str(seqs.get("A 镇")))
+    keys = [poster_ai._geo_key(it) for it in items]
+    check("归并后不再有同坐标的两个点（去重叠不会把它推开）",
+          len(set(k for k in keys if k)) == 4)
+
+    keep, TRUE = poster_ai.coords_of(trip, names, 1)
+    check("每个点都拿到了真位坐标", len(keep) == 4, str(keep))
+    P, _diag = poster_ai.arrange(TRUE, names)
+    check("每个点只出一个坐标", len(P) == 4)
+    tot, bad = poster_ai.check_compass(TRUE, P)
+    check("两两方位自检无错项", tot > 0 and bad == 0, "共 %d 项，错 %d" % (tot, bad))
+
+    # 文字：一个地点最多两行，**画面里不出现任何序号**
+    check("每个点最多两行文字",
+          all(len(r) <= 2 for r in rows_of.values()),
+          str({k: len(v) for k, v in rows_of.items()}))
+    check("文字行里不带序号字段",
+          all("seq" not in r for rs in rows_of.values() for r in rs))
+
+    pr = poster_ai.build_prompt(names, P, TRUE, rows_of,
+                                {nm: poster_ai.scene_of(nm) for nm in names},
+                                "试排", None, poster_ai.title_block(trip, d, 1))
+    check("提示词不再提「红圈」，只说红点", "红圈" not in pr and "红点" in pr)
+    check("提示词明写不许出现序号数字", "不许出现任何序号数字" in pr)
+    check("提示词按地名定位点位（不再按序号点名）", "「A 镇」那个红点" in pr)
+    check("提示词里不再有「序号 N 那个红点」这种点名", "序号 1" not in pr)
+    check("提示词把「画面里只准出现列出的文字」列为硬约束",
+          "只准出现下面列出的文字" in pr)
+    check("提示词不许把标方位的字画进成品",
+          "标方位的几个小字" in pr and "成品里不要写" in pr)
+
+    # 红框只写地名，行程（时段+详情）集中成一块小字写在旁边空处
+    check("提示词明写「朱红框里只写地名、不写描述」",
+          "只写那个地点的名字" in pr and "不要写时间、不要写任何描述" in pr)
+    check("红框被点名的内容就是地名本身（不带时段与详情）",
+          "只写这几个字：A 镇" in pr and "A 镇 ｜ 08:00" not in pr.split("【行程")[0])
+    check("行程文字集中成一块写在空处",
+          "全部集中写在一处" in pr and "画面" in pr.split("全部集中写在一处")[1][:40])
+    check("提示词要求行程那一块只写一次、别拆开",
+          "只写一次" in pr and "不要拆开" in pr)
+    check("行程块按行程顺序逐行列出（地名 ｜ 时段 ｜ 详情）",
+          "A 镇 ｜ 08:00 ｜ 观鸟" in pr or "A 镇 ｜ 09:00 ｜ 鸟浪" in pr)
+
+    # 集中写字的空处：不许压点、压框、压题签
+    units = poster_ai.layout_units(names, P)
+    spot, rad = poster_ai.text_block_spot(units, P, (420, 260))
+    check("集中写字的空处（整块）不压点/框/题签/路线", rad >= 0, "余量 %s px" % round(rad))
+    check("路线走廊当成障碍参与落位（每段至少采样 2 点）",
+          len(poster_ai.route_corridor(P)) >= 2 * (len(P) - 1))
+    check("每个点的单元都有小景框和地名框",
+          all("frame" in u and "strip" in u for u in units.values()))
+    check("地名框比小景框矮（只写一行地名）",
+          all(u["strip"][3] - u["strip"][1] < u["frame"][3] - u["frame"][1]
+              for u in units.values()))
+    check("小景框与地名框都在画布内",
+          all(0 <= v <= poster_ai.W or 0 <= v <= poster_ai.H
+              for u in units.values() for b in (u["frame"], u["strip"]) for v in b) and
+          all(-10 <= u["frame"][0] and u["frame"][2] <= poster_ai.W + 10
+              and -10 <= u["frame"][1] and u["frame"][3] <= poster_ai.H + 10
+              for u in units.values()))
+
+    # 纯文字版（--plain）：不传骨架，位置全靠提示词写死。实测它比骨架版更不容易挪位
+    pp = poster_ai.build_prompt_plain(names, P, rows_of,
+                                      {nm: poster_ai.scene_of(nm) for nm in names},
+                                      poster_ai.title_block(trip, d, 1), None)
+    check("纯文字版不提骨架、也不提参考图",
+          "骨架" not in pp and "参考图" not in pp and "不要参考任何图片" in pp)
+    check("纯文字版把每个点的九宫格位置写进去",
+          all(nm in pp and "画面**" in pp for nm in names), pp[:200])
+    check("纯文字版把地名逐字列出、只写地名",
+          ("· " + " ／ ".join(names)) in pp and "只写地名，不写时间与描述" in pp)
+    check("纯文字版把路线顺序写成明确的链",
+          " → ".join("「%s」" % nm for nm in names) in pp and "一跳都不许跳" in pp)
+    check("题签要求整体横排（竖排会把亮点行挤成小字）",
+          "题签整体横排" in pp)
+    check("纯文字版带行程那一块与题签",
+          "全部集中成一块" in pp and "试排" in pp and "本次行程亮点" in pp)
+    check("纯文字版不许出现序号数字", "不要序号数字" in pp)
+    check("两种提示词都在 2000 字以内（甲方要求，给别的模型也塞得下）",
+          len(pp.replace("\n", "")) <= 2000 and len(pr.replace("\n", "")) <= 2000,
+          "纯文字 %d 字 / 骨架 %d 字" % (len(pp.replace("\n", "")),
+                                        len(pr.replace("\n", ""))))
+
+    # 地名串字（实测「孤东海堤」被写成「孤岛海堤」）的通用防线：逐字列 + 易混提醒
+    sp = poster_ai.name_spell_lines(names)
+    check("每个地名都逐字列出来", len(sp) == len(names)
+          and all("、".join(nm) in x for nm, x in zip(names, sp)), str(sp))
+    check("逐字行里不夹带写错的样子（反面例子会被照抄）",
+          all("孤岛海堤" not in x for x in sp))
+    fake = ["河口区孤岛镇", "孤东海堤", "东营市区", "东八路北端滩涂"]
+    notes = "".join(poster_ai.confusable_notes(fake))
+    check("只共一个冷字的两个地名也判为易混（孤东海堤 × 河口区孤岛镇）",
+          "孤东海堤」= 孤、东、海、堤" in notes
+          and "河口区孤岛镇」= 河、口、区、孤、岛、镇" in notes, notes)
+    check("易混对逐字并排 + 明写别互相借字", "别互相借字" in notes, notes)
+    check("不相干的地名不会被硬配对", "东营市区」= 东、营、市、区，与「孤东海堤」" not in notes, notes)
+    check("两种模式的提示词都写了「逐字确认」",
+          "逐字确认再写" in pp and "逐字确认再写" in pr)
+    check("两种模式的提示词结尾都有逐字回读",
+          "地名逐字回读" in pp and "地名逐字回读" in pr)
+    # 通用后缀式长名 → 海报显示名（8 字的「黄河口生态旅游区」实测被写成「黄河口生态游游」）
+    check("显示名去掉通用后缀", poster_ai.display_name("黄河口生态旅游区") == "黄河口")
+    check("不带通用后缀的地名原样保留", poster_ai.display_name("孤东海堤") == "孤东海堤")
+    check("只剩一两字的别削（不够就保持原名）", poster_ai.display_name("旅游区") == "旅游区")
+    _n2, _r2, _s2, ren = poster_ai.apply_display_names(
+        ["黄河口生态旅游区", "孤东海堤"], {"黄河口生态旅游区": [], "孤东海堤": []},
+        {"黄河口生态旅游区": [1], "孤东海堤": [2]})
+    check("流水线里统一换名并记下映射", _n2 == ["黄河口", "孤东海堤"]
+          and ren == {"黄河口生态旅游区": "黄河口"}, str(ren))
+    _n3, _r3, _s3, ren3 = poster_ai.apply_display_names(
+        ["AB旅游区", "AB"], {}, {})
+    check("换成显示名会撞车就整体作废", _n3 == ["AB旅游区", "AB"] and ren3 == {}, str(ren3))
+
+    # 逐字核对清单：出图后照着它一个一个字看
+    ck = poster_ai.checklist_text(names, poster_ai.title_block(trip, d, 1), rows_of)
+    check("核对清单逐字列出每个地名", all("、".join(nm) in ck for nm in names), ck[:200])
+    check("核对清单含题签与行程行", "【题签】" in ck and "【行程】" in ck)
+    check("核对清单说明用法（不对就重生成）", "不对就重生成" in ck)
+
+    sc = poster_ai.spell_check_lines(fake)
+    check("回读清单把每个地名逐字排开", "、".join(fake[0]) in sc[1], sc[1])
+
+    # 位置：框要贴着自己的红点，且提示词把每个点的画面位置写死（不能只靠模型看骨架）
+    check("每个框心离自己的红点都很近（不再被推走）",
+          all(u["offset"] <= 300 for u in units.values()),
+          str({k: v["offset"] for k, v in units.items()}))
+    pl = poster_ai.pos_lines(names, P)
+    check("每个点都给了九宫格位置", len(pl) == len(names) and all("画面**" in x for x in pl),
+          str(pl))
+    check("位置说明带与近邻的相对方位", all("方" in x for x in pl), str(pl))
+    check("提示词把位置写成硬要求", "每个点在画面的哪个位置" in pr and "放错了整张作废" in pr)
+    check("提示词点明骨架红框里已经写着地名", "已经用淡墨写着这个地点的名字" in pr)
+    check("提示词不许把地名两两对调", "不许把两个地名对调" in pr)
+
+    # 字号自适应：太长的地名要缩到放得下，但不能缩到 lo 以下
+    m = lambda t, s: len(t) * s * 1.05        # noqa: E731
+    check("短地名给的字号更大",
+          poster_ai.name_font_size("A 镇", 230, m) > poster_ai.name_font_size("黄河口生态旅游区", 230, m))
+    check("再长也不小于下限",
+          poster_ai.name_font_size("一二三四五六七八九十一二三四五六七八九十", 60, m) == 13)
+    # 骨架不写字的落地证据：模块里已无编号印字体/绘制
+    check("骨架不再画编号印（无 fseal / 无白字数字）",
+          "fseal" not in open(os.path.join(ROOT, "scripts", "poster_ai.py"),
+                              encoding="utf-8").read())
+
+    # 题签也吃同一张归并表：一个地点在亮点句里只能有一个称呼
+    tb = poster_ai.title_block(trip, d, 1)
+    joined = "".join(tb["lines"])
+    check("题签已产出亮点句", len(tb["lines"]) >= 2, str(tb["lines"]))
+    check("题签里同一地点不用两个名字（别名归并到规范名）",
+          "A 镇东门" not in joined and "A 镇" in joined, joined)
+    check("归并表把别名映射到代表名",
+          poster_ai.canon_names(items).get("A 镇东门") == "A 镇")
+    # 代表名规则：优先「是其它名字前缀」的那个（最通用的写法），而不是先出现的那个
+    check("同坐标合并后取最通用的名字（长名先出现也取前缀名）",
+          names[0] == "A 镇", str(names))
+    check("_rep_name 无前缀关系时取最短的",
+          poster_ai._rep_name(["东八路湿地观景台", "东八路北端滩涂"]) == "东八路北端滩涂")
+
+    # 生图接口偶发返回一张近乎空白的图却报成功（实测遇到一次，交付前才发现）。
+    # 交付前必须机器判一道，别靠肉眼。
+    try:
+        from PIL import Image
+        import poster_check
+    except Exception:                                          # noqa: BLE001
+        check("poster_check 需要 Pillow，本环境跳过", True, "skipped")
+    else:
+        td = tempfile.mkdtemp(prefix="posterchk-")
+        blank = os.path.join(td, "blank.png")
+        Image.new("RGB", (1024, 1536), (128, 128, 128)).save(blank)
+        real = os.path.join(td, "real.png")
+        im = Image.new("RGB", (1024, 1536), (248, 243, 230))
+        px = im.load()
+        for i in range(0, 1024, 3):
+            for j in range(0, 1536, 3):
+                px[i, j] = (60 + (i * 7) % 150, 60 + (j * 5) % 150, 70)
+        im.save(real)
+        check("空白图被判不合格（生图偶发返回空白）",
+              poster_check.check(blank)[0] is False, poster_check.check(blank)[1])
+        check("画满的正常图判合格",
+              poster_check.check(real)[0] is True, poster_check.check(real)[1])
+        small = os.path.join(td, "small.png")
+        im.resize((640, 900)).save(small)
+        check("尺寸偏小也被拦（A4 竖幅）",
+              poster_check.check(small)[0] is False, poster_check.check(small)[1])
+        check("文件不存在也不崩", poster_check.check(os.path.join(td, "nope.png"))[0] is False)
+        shutil.rmtree(td, ignore_errors=True)
+
+
+def test_poster_points_cap():
+    """一张图最多 8 个点，超了按**真位最近的一对**合并。
+
+    点一多，文字框互相挤、字越写越小，模型也画不准（实测把一天 18 条列成 17 行小字，
+    模型直接合并、漏行）。所以硬性封顶，先并最近的（最近的一对本来就常是同一片地方）。
+    """
+    import poster_ai
+
+    check("点位上限是 8", poster_ai.MAX_POINTS == 8, str(poster_ai.MAX_POINTS))
+
+    # 10 个点：P9 紧贴 P1（约 1.5 km），其余分散
+    ll = [
+        ("P1", 119.000, 37.400, "08:00", "出发"), ("P2", 119.050, 37.450, "09:00", "午餐"),
+        ("P3", 119.100, 37.500, "10:00", "观鸟"), ("P4", 119.150, 37.550, "11:00", "赶海"),
+        ("P5", 119.200, 37.600, "12:00", "日出"), ("P6", 119.250, 37.650, "13:00", "观星"),
+        ("P7", 119.300, 37.700, "14:00", "游船"), ("P8", 119.350, 37.750, "15:00", "日落"),
+        ("P9", 118.999, 37.399, "16:00", "路过"), ("P10", 119.400, 37.800, "17:00", "晚餐"),
+    ]
+    items = [{"item_id": "d1-%02d" % (i + 1), "place": p[0], "time": p[3], "kind": "visit",
+              "title": p[4], "geo": {"lng": p[1], "lat": p[2]}} for i, p in enumerate(ll)]
+    trip = {"request": {"destination": {"name": "东营"}},
+            "itinerary": {"days": [{"day_id": "D1", "date": "2026-10-16",
+                                    "weekday": "周五", "title": "试排", "items": items}]}}
+
+    _d, _items, order, seqs, rows_of = poster_ai.collect(trip, 1)
+    check("10 个不同坐标就是 10 个点", len(order) == 10, str(order))
+    names, TRUE = poster_ai.coords_of(trip, order, 1)
+    check("10 个点都拿到真位", len(names) == 10, str(names))
+
+    names, TRUE, merged = poster_ai._reduce_points(names, TRUE, seqs, rows_of,
+                                                   poster_ai.MAX_POINTS)
+    check("合并后不超过 8 个点", len(names) == poster_ai.MAX_POINTS, str(names))
+    check("先并最近的一对（P9 并进 P1）",
+          "P9" not in names and merged.get("P1") == ["P9"], str(merged))
+    check("被并掉的点不再占位、也不再占文字",
+          "P9" not in seqs and "P9" not in rows_of)
+    check("合并后每点仍最多两行",
+          all(len(r) <= 2 for r in rows_of.values()),
+          str({k: len(v) for k, v in rows_of.items()}))
+
+    P, _diag = poster_ai.arrange(TRUE, names)
+    tot, bad = poster_ai.check_compass(TRUE, P)
+    check("合并后方位自检仍无错项", tot > 0 and bad == 0, "共 %d 项，错 %d" % (tot, bad))
+
+    # maxn=0：不设上限，一个不并（用干净的一份数据，别受上面合并结果影响）
+    _d2, _i2, o2, s2, r2 = poster_ai.collect(trip, 1)
+    nm2, TRUE2 = poster_ai.coords_of(trip, o2, 1)
+    n2, _t2, m2 = poster_ai._reduce_points(nm2, TRUE2, s2, r2, 0)
+    check("max-points 0 = 不设上限（不合并）", len(n2) == 10 and not m2, str(m2))
+
+
 def main():
     print("travel-orchestrator 回归测试")
     print("=" * 56)
@@ -982,6 +1290,9 @@ def main():
     test_tools()
     test_smoothness()
     test_routemap()
+    test_poster_ai()
+    test_poster_points_cap()
+    test_booking_links()
     test_hardening()
     failed = [n for n, ok, _ in results if not ok]
     print("\n" + "=" * 56)

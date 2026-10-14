@@ -43,7 +43,7 @@ travel-orchestrator/
 - `tests/run_tests.py`：规则引擎与渲染器的回归测试，含故意写坏的对照组（验证阻断项能被正确抓出）。
   跑法：`python tests/run_tests.py`。不需要网络、不需要第三方库。
 - 改了 `red_team.py` 的规则或 `render_plan.py` 的输出，**必须同步更新示例产物**，
-  否则 `verify_all.py` 的“示例同步”一步会失败。
+  否则 `verify_all.py` 的"示例同步"一步会失败。
 
 ## tools/（维护者用）
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-render_plan.py · travel-orchestrator 交付渲染器（只用标准库，完全自包含）
+render_plan.py · travel-orchestrator 交付渲染器（只用标准库）
 
 从同一份行程数据（travel-plan/<trip_id>/trip.json）渲染两种交付物：
   1. Markdown 完整攻略（.md）
@@ -39,13 +39,14 @@ import json
 import math
 import os
 import re
+import struct
 import sys
 from datetime import datetime
 from urllib.parse import quote
 
 import nature_widgets as nw  # 自然专项的交互件（星图/潮汐点选图等）
 
-VERSION = "3.8.0"
+VERSION = "3.11.0"
 ATTR_LINE = "由 旅行规划总编排（travel-orchestrator）生成"
 
 STATUS_LABEL = {
@@ -507,7 +508,7 @@ def md_from_trip(trip: dict) -> str:
         for f_ in food:
             nm = str(f_.get("name", ""))
             kw = f_.get("search") or nm
-            bks = nw.booking_links(kw, f_.get("booking_kind") or "food")
+            bks = nw.booking_links(kw, f_.get("booking_kind") or "food", f_)
             cell = nm + ("（" + " / ".join(f"[{t}]({u})" for t, u in bks) + "）" if bks else "")
             L.append(f"| {cell} | {f_.get('price', '未查到')} | "
                      f"{f_.get('why', '')} | {f_.get('note', '') or '—'} |")
@@ -676,13 +677,6 @@ text-decoration:none;white-space:nowrap}
 padding:13px 15px;margin:0 0 14px;box-shadow:3px 3px 0 var(--bb-blue-soft)}
 .route .rhead{font-weight:900;font-size:14px;color:var(--ink-2);margin-bottom:7px}
 .route .rhead .rsub{font-size:12px;font-weight:600;color:var(--ink-3)}
-.rmap{margin:2px 0 9px;border:1.5px dashed var(--stroke-2);border-radius:12px;
-background:#faf9fd;padding:6px 8px 4px}
-.rmap svg{display:block;width:100%;height:auto;max-height:270px}
-.rgrid line{stroke:#ece7f2;stroke-width:1}
-.rpath{fill:none;stroke:var(--bb-blue);stroke-width:2;stroke-dasharray:6 5;opacity:.75}
-.rmap circle{stroke:#fff;stroke-width:2;paint-order:stroke}
-.rmapcap{margin-top:2px;font-size:11.5px;color:var(--ink-3);text-align:center}
 .rline{display:flex;gap:9px;align-items:flex-start;padding:5px 0;flex-wrap:wrap}
 .rline>b{flex:0 0 auto;font-size:12.5px;font-weight:900;color:#fff;background:var(--bb-pink);
 padding:2px 10px;border-radius:999px}
@@ -700,7 +694,6 @@ gap:9px;align-items:center}
 border:1.5px solid var(--bb-blue);border-radius:999px;padding:3px 13px;font-size:12.5px}
 .rfoot .rbtn.ghost{background:#fff;color:var(--bb-pink-deep);border-color:var(--bb-pink)}
 .rfoot>span{flex:1 1 100%;line-height:1.6}
-@media (max-width:480px){.rmap svg{max-height:200px}}
 .hl{font-weight:800}
 .tl{position:relative;padding-left:26px;border-left:2px dashed rgba(0,161,214,.4)}
 .slot{position:relative;margin:0 0 8px;padding:8px 11px;border-radius:13px}
@@ -1223,77 +1216,28 @@ def _spread(xy, radius=16.0):
     return out
 
 
-def _routemap(pts, total=None):
-    """内联 SVG 动线示意图：把带坐标的停靠点按顺序连起来（离线，不联网）。
+def _smooth_path(points):
+    """Catmull-Rom 转三次贝塞尔：一串点连成圆角曲线，避免折线的生硬拐角。
 
-    离线单文件放不了真地图（瓦片要联网、要 Key），所以这里画的是**相对方位
-    正确、比例不作数**的示意图：谁在东边、谁在西边、顺序怎么走，一眼能看出来。
-
-    `pts` 每项是 (lng, lat, name, day_no, seq)：`seq` 是**全局停靠点序号**，
-    也就是下方逐日列表里的标号——两边必须一致，读者才能对着图找行。
-    没坐标的点不画，序号就会留缺口，末尾用一句话说明，别让人以为漏了。
+    点数不够画曲线时退化成直线串。只用于示意图（非导航路径），
+    圆润比精确重要。
     """
-    if len(pts) < 2:
-        return ""
-    W, H = 640, 300
-    proj = nw.project_points([(p[0], p[1], p[2]) for p in pts], W, H)
-    if len(proj) < 2:
-        return ""
-    xy = _spread([(p[0], p[1]) for p in proj])
-    path = " ".join("%.1f,%.1f" % (p[0], p[1]) for p in xy)
-    grid = "".join('<line x1="%d" y1="0" x2="%d" y2="%d"/>' % (x, x, H)
-                   for x in range(80, W, 80))
-    grid += "".join('<line x1="0" y1="%d" x2="%d" y2="%d"/>' % (y, W, y)
-                    for y in range(60, H, 60))
-    nodes = []
-    for (x, y), p in zip(xy, pts):
-        name, n = p[2], p[4]
-        c = ROUTE_COLORS[(p[3] - 1) % len(ROUTE_COLORS)]
-        nodes.append(
-            '<g><title>' + e("%d. %s" % (n, name))
-            + '</title><circle cx="%.1f" cy="%.1f" r="11" fill="%s"/>' % (x, y, c)
-            + '<text x="%.1f" y="%.1f" text-anchor="middle" dominant-baseline="central" '
-              'font-size="11" font-weight="700" fill="#ffffff">%d</text></g>' % (x, y, n)
-        )
-    cap = "位置示意（非等比）：标号＝下方停靠点序号，颜色按天区分"
-    if total and total > len(pts):
-        cap += "；另有 %d 个点未录坐标，图中不显示" % (total - len(pts))
-    return (
-        '<div class="rmap"><svg viewBox="0 0 %d %d" role="img" '
-        'aria-label="行程动线示意图" preserveAspectRatio="xMidYMid meet">' % (W, H)
-        + '<g class="rgrid">' + grid + '</g>'
-        + '<polyline class="rpath" points="' + path + '"/>'
-        + "".join(nodes)
-        + '</svg><div class="rmapcap">' + e(cap) + '</div></div>'
-    )
+    if len(points) < 3:
+        return "M" + " L".join("%.1f %.1f" % p for p in points)
+    d = "M%.1f %.1f" % points[0]
+    for i in range(len(points) - 1):
+        p0 = points[i - 1] if i > 0 else points[i]
+        p1, p2 = points[i], points[i + 1]
+        p3 = points[i + 2] if i + 2 < len(points) else p2
+        c1 = (p1[0] + (p2[0] - p0[0]) / 6.0, p1[1] + (p2[1] - p0[1]) / 6.0)
+        c2 = (p2[0] - (p3[0] - p1[0]) / 6.0, p2[1] - (p3[1] - p1[1]) / 6.0)
+        d += " C%.1f %.1f %.1f %.1f %.1f %.1f" % (c1 + c2 + p2)
+    return d
 
 
 def _stops(it):
-    """全行程的停靠点 + 全局序号 —— 编号规则的**唯一**实现。
-
-    同一天里同名地点只算一次，跨天连续编号。HTML 的动线图、MD 的动线清单、
-    逐日列表都读这一份结果，才不会出现「图上第 5 个点」和「MD 第 5 条」指两处。
-    以前这条规则在 _flow / _md_route 里各写一遍，改一处忘一处就悄悄错位。
-
-    返回 (rows, total)：rows 是 [(day_id, [(name, seq, lat, lng), ...]), ...]，
-    只保留有停靠点的天；total 是最大的那个全局序号。
-    """
-    rows, seq = [], 0
-    for idx, d in enumerate(_objs(it.get("days")), 1):
-        did = d.get("day_id") or "D" + str(idx)
-        stops = []
-        for i in _objs(d.get("items")):
-            if _blank_item(i) or not i.get("place"):
-                continue
-            name = str(i["place"]).strip()
-            if not name or any(name == s[0] for s in stops):
-                continue
-            geo = _geo(i)
-            seq += 1
-            stops.append((name, seq, nw.num(geo.get("lat")), nw.num(geo.get("lng"))))
-        if stops:
-            rows.append((did, stops))
-    return rows, seq
+    """全行程停靠点 + 全局序号。唯一实现在 nw.route_stops，这里只是薄封装。"""
+    return nw.route_stops(it)
 
 
 def _md_route(it):
@@ -1323,15 +1267,13 @@ def _md_route(it):
 
 
 def _flow(it):
-    """行程动线：一张路线示意图 + 逐日停靠点 + 跳外部地图的按钮。
+    """行程动线：逐日停靠点（每个名字可点开地图）+ 两个跳外部地图的按钮。
 
-    页面是离线单文件，内嵌不了真地图。所以这里给三层：
-      1. SVG 示意图——顺序与相对方位，离线可看；
-      2. 逐日停靠点——每个名字都是可点的地图搜索链接；
-      3. 两个跳转按钮——「看全部点位」和「规划整条路线」交给高德网页版，
+    页面是离线单文件，内嵌不了真地图，所以本页**不画路线示意图**：
+      1. 逐日停靠点——每个名字都是可点的地图搜索链接，编号与 MD 的动线一览一致；
+      2. 两个跳转按钮——「看全部点位」「规划整条路线」交给高德网页版，
          有网时点一下就得到真地图和真路径。
-    只在停靠点带 `geo: {lat,lng}` 时才画图与给路线按钮；没有坐标就退化成
-    纯链接列表，不留空壳。
+    没有坐标就退化成纯链接列表，不留空壳。
     """
     rows_data, seq = _stops(it)
     if not rows_data:
@@ -1349,11 +1291,11 @@ def _flow(it):
                     + "</div></div>")
 
     head = ('<div class="rhead">动线一览<span class="rsub">'
-            '按行程顺序串起来；标号与下方停靠点一致</span></div>')
-    body = head + _routemap(pts, seq) + "".join(rows)
+            '按行程顺序连起来；标号与 MD 的停靠点清单一致</span></div>')
+    body = head + "".join(rows)
 
     # 跳外部地图：多点标注 + 路径规划。uri.amap.com 的 via 只支持一个途经点，
-    # 所以路线链接最多体现三段，真正的完整顺序看上面的示意图与列表。
+    # 所以路线链接最多体现三段；完整顺序看上面的列表。
     links = []
     mk = nw.markers_url(pts)
     if mk:
@@ -1364,13 +1306,15 @@ def _flow(it):
         links.append('<a class="rbtn ghost" href="' + e(rt) + '" target="_blank" '
                      'rel="noopener">规划整条路线</a>')
     if links:
-        tip = "示意图非导航路径，真实路况以地图为准"
-        if len(pts) > nw.MARKER_LIMIT:
-            tip += f"；「全部点位」只标前 {nw.MARKER_LIMIT} 个，其余请看上方示意图"
+        tip = "本页不含路线图，路况与导航以地图为准"
+        if not pts:
+            tip = "停靠点补 geo 坐标后，这里可以一键跳到地图看全部点位"
+        elif len(pts) > nw.MARKER_LIMIT:
+            tip += f"；「全部点位」只标前 {nw.MARKER_LIMIT} 个"
         foot = '<div class="rfoot">' + "".join(links) + "<span>" + tip + "</span></div>"
     else:
-        foot = ('<div class="rfoot"><span>按行程顺序画的动线；'
-                '点位名可点，点开就是地图搜索</span></div>')
+        foot = ('<div class="rfoot"><span>按行程顺序排的点位；'
+                '名字可点，点开就是地图搜索</span></div>')
     return '<div class="route">' + body + foot + "</div>"
 
 
@@ -1417,7 +1361,7 @@ def _days(it):
             chips = ""
             if isinstance(book, dict) and book.get("keyword"):
                 chips = nw.link_chips(nw.booking_links(
-                    book.get("keyword"), book.get("kind") or "ticket"))
+                    book.get("keyword"), book.get("kind") or "ticket", book))
             note = ('<div class="nt">' + e(i["notes"]) + "</div>") if i.get("notes") else ""
             meta = (("<div>" + place + st_html + "</div>") if (place or st_html) else "") + chips
             t_html = ('<div class="t">' + e(i.get("time")) + "</div>") if i.get("time") else ""
@@ -1444,7 +1388,7 @@ def _food(it):
     for x in food:
         name = str(x.get("name", ""))
         kw = str(x.get("search") or name).strip()
-        chips = nw.link_chips(nw.booking_links(kw, x.get("booking_kind") or "food"))
+        chips = nw.link_chips(nw.booking_links(kw, x.get("booking_kind") or "food", x))
         rows += (f'<tr><td>{e(name)}{chips}</td>'
                  f'<td class="num">{e(x.get("price") or "未查到")}</td>'
                  f'<td>{e(x.get("why", ""))}</td><td>{e(x.get("note") or "—")}</td></tr>')
@@ -1512,7 +1456,7 @@ def _checklist(it):
             else '<span class="mark" title="未办"></span>'
         # 「买门票/订酒店/订车票」这类待办直接挂平台入口，用户不用自己再搜一遍。
         bk = c.get("booking") or {}
-        chips = (nw.link_chips(nw.booking_links(bk.get("keyword"), bk.get("kind") or "ticket"))
+        chips = (nw.link_chips(nw.booking_links(bk.get("keyword"), bk.get("kind") or "ticket", bk))
                  if isinstance(bk, dict) and bk.get("keyword") else "")
         items += ('<div class="todo' + (" is-done" if done else "") + '">' + mark
                   + '<span class="txt"><span class="ti">【' + prio + "】"
@@ -1746,7 +1690,7 @@ def html_from_trip(trip: dict) -> str:
 
 def write_outputs(trip_path: str, out_dir: str | None = None,
                   force: bool = False, skip_structure_gate: bool = False) -> dict:
-    """渲染 MD + HTML。
+    """渲染 MD + HTML（同源的两份交付物）。
 
     skip_structure_gate=True 供 `build_trip.py render` 使用：那条路已经校验过一次，
     同一份数据、同一套规则再校验一遍纯属重复收费（校验本身不慢，但每次失败都要
@@ -1770,7 +1714,7 @@ def write_outputs(trip_path: str, out_dir: str | None = None,
     ver = trip.get("plan_version", 1)
     md_path = os.path.join(base, f"{tid}_v{ver}.md")
     html_path = os.path.join(base, f"{tid}_v{ver}.html")
-    # 两份都在内存里算完再落盘：中途抛异常时不会留下"MD 是新的、HTML 是旧的"
+    # 先全部算完再落盘：中途抛异常时不会留下"MD 是新的、HTML 是旧的"
     # 这种半新半旧的产物——读者分不出哪份对，比一份都没有更糟。
     md_text = md_from_trip(trip)
     html_text = html_from_trip(trip)
@@ -1778,8 +1722,9 @@ def write_outputs(trip_path: str, out_dir: str | None = None,
         f.write(md_text)
     with open(html_path, "w", encoding="utf-8", newline="\n") as f:
         f.write(html_text)
-    return {"trip_id": tid, "plan_version": ver, "md": md_path, "html": html_path,
-            "content_hash": canonical_hash(trip)}
+    out = {"trip_id": tid, "plan_version": ver, "md": md_path, "html": html_path,
+           "content_hash": canonical_hash(trip)}
+    return out
 
 
 def check_outputs(trip_path: str, out_dir: str | None = None) -> dict:
@@ -1819,7 +1764,8 @@ def check_outputs(trip_path: str, out_dir: str | None = None) -> dict:
                              (g(trip, "itinerary", "nature", "stargazing", "moon_phase"), "月相")):
             if probe and str(probe) not in blob:
                 problems.append(f"{label} {probe} 未出现在产物中")
-    return {"ok": not problems, "problems": problems, "files": [md_path, html_path]}
+    files = [md_path, html_path]
+    return {"ok": not problems, "problems": problems, "files": files}
 
 
 def main(argv=None) -> int:

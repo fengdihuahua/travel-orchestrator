@@ -12,9 +12,8 @@ v2.3.0 重名地名告警:
     详见 references/nature-apis.md §6.2。
 
 v2.1.0 观鸟接口改为免注册:
-  - 观鸟：原 eBird 需免费 Token 注册，对"装完即用"的 skill 体验不友好。
     现默认走 iNaturalist API（免 Key）：真实观测记录 + 当季鸟种名录 + 简体中文名
-    + 逐月物候直方图；GBIF 作为备用数据源；eBird 降级为可选增强（有 Token 时更全）。
+    + 逐月物候直方图；GBIF 作为备用数据源。全程免注册。
   - 新增 birdinfo：物种卡（简中名 / 学名 / 科属 / 保护等级 / 简介 / 本地最佳月份）
   - 新增 birdtime：观鸟黄金时段（日出日落 + 风/降水/能见度约束，本地计算）
   - birdspot 改为免 Key：按真实记录的记录点数排序热点地点
@@ -40,7 +39,6 @@ v2.0.0 接口修复:
   python nature_forecast.py birdinfo  --name 丹顶鹤
   python nature_forecast.py birdtime  --city 威海 --date 2026-10-02
   python nature_forecast.py birdspot  --city 威海
-  python nature_forecast.py bird      --region CN-37 --token YOUR_EBIRD_TOKEN   # 可选增强
   python nature_forecast.py selftest
 """
 
@@ -56,7 +54,7 @@ import urllib.parse
 import urllib.request
 from datetime import date, datetime, timedelta, timezone
 
-VERSION = "2.3.0"
+VERSION = "2.4.0"
 UA = "travel-orchestrator/" + VERSION
 QUERY_DATE = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 TZ_CN = "Asia/Shanghai"
@@ -595,28 +593,7 @@ def cmd_glow(args):
 
 
 # ---------------------------------------------------------------- 5. 观鸟（默认免注册）
-# 数据源策略：iNaturalist（主源，免 Key）> GBIF（备用，免 Key）> eBird（可选增强，需免费 Token）
-INAT_API = "https://api.inaturalist.org/v1"
-GBIF_API = "https://api.gbif.org/v1"
-EBIRD_API = "https://api.ebird.org/v2"
-# eBird 免费 Token 的候选环境变量名（--token 优先级最高）
-EBIRD_TOKEN_ENV = ("EBIRD_API_TOKEN", "EBIRD_TOKEN")
-
-EBIRD_TOKEN_HOWTO = (
-    "eBird Token 免费申请（非商业约 1000 次/天）：https://ebird.org/api/keygen\n"
-    "  申请后任选一种方式传入：\n"
-    "    1) 命令参数   --token 你的Token\n"
-    "    2) 环境变量   set EBIRD_API_TOKEN=你的Token   (Windows)\n"
-    "                  export EBIRD_API_TOKEN=你的Token (macOS/Linux)\n"
-    "  验证是否可用：python nature_forecast.py ebirdcheck")
-
-BIRD_NOTE = (
-    "[提示] 最佳时段：日出前 30 分钟到日出后 3 小时（鸟最活跃），傍晚日落前 2 小时次之；\n"
-    "       迁徙季（3-5 月 / 9-11 月）过境鸟最多，繁殖季（5-7 月）鸣唱最密；\n"
-    "       观鸟伦理：不惊鸟、不诱拍、不使用鸟鸣回放、不靠近巢穴、不公开珍稀鸟精确坐标。")
-BIRD_DISCLAIMER = (
-    "[提示] 观鸟记录来自公民科学平台，只代表「有人记录到」，不等于「你一定能看到」；\n"
-    "       珍稀鸟种坐标已被平台模糊化处理，请勿据此精确搜寻。")
+# 数据源策略：iNaturalist（主源，免 Key）> GBIF（备用，免 Key）。两者都免注册。
 
 
 def inat_get(path, params=None, timeout=25):
@@ -738,140 +715,17 @@ def _species_rows(results, limit=None):
     return rows
 
 
-def _ebird_only(args):
-    """兼容旧用法：只给 --region/--token 时走 eBird（可选增强）。"""
-    if not re.match(r"^[A-Z]{2}(-[A-Z0-9]{1,3})?$", args.region):
-        raise ValueError("--region 格式应如 CN 或 CN-37")
-    token = resolve_ebird_token(getattr(args, "token", None))
-    if not token:
-        raise ValueError("需要 eBird Token。\n" + EBIRD_TOKEN_HOWTO)
-    back = max(1, min(int(args.days), 30))
-    try:
-        data = ebird_get("/data/obs/" + args.region + "/recent", token, {"back": back})
-    except urllib.error.HTTPError as e:
-        _ebird_http_error(e)
-    out("eBird 近期观测 - " + args.region + " - 近 " + str(back) + " 天", data,
-        "api.ebird.org (eBird/康奈尔)", note=BIRD_NOTE, disclaimer=BIRD_DISCLAIMER)
-    return 0
-
-
-# ---------------------------------------------------------------- 5b. eBird 完整支持
-def resolve_ebird_token(explicit=None):
-    """按 参数 > 环境变量 的顺序解析 eBird Token；都没有则返回 None。"""
-    if explicit and str(explicit).strip():
-        return str(explicit).strip()
-    for key in EBIRD_TOKEN_ENV:
-        val = os.environ.get(key)
-        if val and val.strip():
-            return val.strip()
-    return None
-
-
-def ebird_get(path, token, params=None, timeout=25):
-    """调用 eBird API。所有端点统一用 X-eBirdApiToken 头传递 Token。"""
-    url = EBIRD_API + path
-    if params:
-        url += "?" + urllib.parse.urlencode(params)
-    return fetch_json(url, headers={"X-eBirdApiToken": token}, timeout=timeout)
-
-
-def ebird_geo_recent(lat, lng, dist_km, back_days, token, max_results=100, notable=False):
-    """按经纬度查近期观测（免 region 编码，最适合旅行场景）。
-
-    参数上限：dist<=50km，back<=30 天。notable=True 时只返回该地区罕见的鸟种。
-    """
-    path = "/data/obs/geo/recent" + ("/notable" if notable else "")
-    params = {
-        "lat": round(float(lat), 5), "lng": round(float(lng), 5),
-        "dist": max(1, min(int(dist_km), 50)),
-        "back": max(1, min(int(back_days), 30)),
-    }
-    if not notable:
-        params["maxResults"] = max(1, min(int(max_results), 10000))
-    return ebird_get(path, token, params)
-
-
-def ebird_hotspots(lat, lng, dist_km, token, limit=30):
-    """附近观鸟热点（eBird 全球热点库，质量高于用户自由填写的地点名）。"""
-    data = ebird_get("/ref/hotspot/geo", token, {
-        "lat": round(float(lat), 5), "lng": round(float(lng), 5),
-        "dist": max(1, min(int(dist_km), 50)), "fmt": "json",
-    })
-    if not isinstance(data, list):
-        return []
-    rows = []
-    for h in data[:limit]:
-        rows.append({
-            "热点名称": h.get("locName"),
-            "eBird代码": h.get("locId"),
-            "鸟种数": h.get("numSpeciesAllTime"),
-            "最近记录": (h.get("latestObsDt") or "")[:10],
-            "坐标": [h.get("lat"), h.get("lng")],
-            "页面": "https://ebird.org/hotspot/" + str(h.get("locId")),
-        })
-    return rows
-
-
-def _ebird_rows(data):
-    """把 eBird 观测数组整理成与 iNat 对齐的记录行。"""
-    rows = []
-    for o in data if isinstance(data, list) else []:
-        sub = o.get("subId")
-        rows.append({
-            "date": (o.get("obsDt") or "")[:10],
-            "中文名": o.get("comName"),
-            "学名": o.get("sciName"),
-            "eBird代码": o.get("speciesCode"),
-            "地点": o.get("locName"),
-            "数量": o.get("howMany"),
-            "lat": o.get("lat"), "lng": o.get("lng"),
-            "record_url": ("https://ebird.org/checklist/" + str(sub)) if sub else None,
-        })
-    return rows
-
-
-def _ebird_http_error(e):
-    """把 eBird 的 HTTP 错误翻译成能照着做的提示。"""
-    if e.code in (401, 403):
-        downgrade("eBird 鉴权失败（HTTP " + str(e.code) + "）", [
-            "Token 无效、过期或未提供 —— 注意不要带引号或多余空格",
-            EBIRD_TOKEN_HOWTO,
-        ])
-    elif e.code == 429:
-        downgrade("eBird 请求超限（HTTP 429）", [
-            "免费 Token 约 1000 次/天，请稍后再试或减少 --limit",
-        ])
-    else:
-        downgrade("eBird 接口异常（HTTP " + str(e.code) + "）", [
-            "检查网络后重试；若持续失败可去掉 --source ebird 改用免 Key 的 iNaturalist",
-        ])
-    sys.exit(1)
-
-
 def cmd_bird(args):
-    """观鸟：近期真实观测记录。
-
-    默认免注册（iNaturalist 主源 + GBIF 备用）；提供 eBird Token 时自动启用 eBird 增强，
-    并额外给出「珍稀鸟种」提醒。--source 可强制指定单一数据源。
-    """
+    """观鸟：近期真实观测记录。iNaturalist 主源，失败回落 GBIF。全程免注册。"""
     has_place = bool(args.city) or (args.lat is not None and args.lng is not None)
-    if not has_place and args.token and args.region:
-        return _ebird_only(args)
     if not has_place:
-        raise ValueError("需要 --city 或 --lat/--lng（eBird 也可按经纬度直接查询）")
+        raise ValueError("需要 --city 或 --lat/--lng")
 
     lat, lng, label = resolve_place(args.city, args.lat, args.lng)
     radius = max(1, min(int(args.radius), 200))
     days = max(1, min(int(args.days), 365))
     limit = max(1, min(int(args.limit), 100))
-    token = resolve_ebird_token(getattr(args, "token", None))
-
-    src = args.source
-    if src == "auto":
-        src = "ebird+inat" if token else "inat"
-    if src == "ebird" and not token:
-        raise ValueError("--source ebird 需要 Token。\n" + EBIRD_TOKEN_HOWTO)
-
+    src = "inat"
     payload = {
         "location": label, "lat": round(lat, 4), "lng": round(lng, 4),
         "radius_km": radius, "back_days": days, "source_mode": src,
@@ -880,43 +734,8 @@ def cmd_bird(args):
     notes = []
     merged = []
 
-    # ---- eBird（有 Token 时启用；--source ebird 时为唯一数据源）
-    if src in ("ebird", "ebird+inat"):
-        try:
-            raw = ebird_geo_recent(lat, lng, radius, min(days, 30), token,
-                                   max_results=limit * 10)
-            rows = _ebird_rows(raw)
-            sources_used.append("eBird (api.ebird.org)")
-            payload["ebird_recent_count"] = len(rows)
-            if days > 30:
-                payload["ebird_window_note"] = ("eBird geo 端点回溯上限 30 天，"
-                                                "已按 30 天查询（iNaturalist 结果仍按 "
-                                                + str(days) + " 天）")
-            for r in rows:
-                r["来源"] = "eBird"
-                merged.append(r)
-            try:
-                notable = _ebird_rows(ebird_geo_recent(
-                    lat, lng, radius, min(days, 30), token, notable=True))
-                for r in notable:
-                    r["来源"] = "eBird(珍稀)"
-                payload["ebird_notable"] = notable
-                if notable:
-                    notes.append("eBird 标记出 " + str(len(notable))
-                                 + " 条该地区罕见鸟种记录（见 ebird_notable）；"
-                                 "珍稀鸟请勿公开精确坐标，也不要为拍摄惊扰。")
-            except urllib.error.HTTPError as e2:
-                payload["ebird_notable"] = None
-                notes.append("eBird 珍稀鸟种端点失败（HTTP " + str(e2.code)
-                             + "），不影响其他结果。")
-        except urllib.error.HTTPError as e:
-            if src == "ebird":
-                _ebird_http_error(e)
-            notes.append("eBird 增强失败（HTTP " + str(e.code) + "），已回退到免 Key 数据源。")
-            src = "inat"
-
     # ---- iNaturalist（免 Key 主源）
-    if src in ("inat", "ebird+inat"):
+    if src == "inat":
         try:
             rows, total = inat_recent_birds(lat, lng, radius, days, limit)
             zh = inat_zh_names([r.get("taxon_id") for r in rows])
@@ -949,26 +768,21 @@ def cmd_bird(args):
                                  "时效性弱于公民科学平台。")
                 except Exception as e2:
                     downgrade("观鸟数据源全部失败: " + str(e2)[:80], [
-                        "用 web 搜索『城市名 观鸟 记录』，或查 ebird.org/explore",
+                        "用 web 搜索『城市名 观鸟 记录』",
                         "中国观鸟记录中心 birdreport.cn（页面可查，暂无公开 API）",
                     ])
                     sys.exit(1)
 
-    # ---- 当季鸟种名录（iNaturalist 独有：eBird 无等价的聚合端点）
+    # ---- 当季鸟种名录：近一年同地出现过的鸟种
     # per_page 只要 15：响应体越小越快，实测比请求 60 条再截断快一倍以上
     season_plus, season_total = [], None
-    if src in ("inat", "ebird+inat"):
+    if src == "inat":
         try:
             sres, season_total = inat_species_counts(
                 lat, lng, radius, today_cn() - timedelta(days=365), today_cn(), 15)
             season_plus = _species_rows(sres, 12)
         except Exception:
             pass
-    elif src == "ebird":
-        notes.append("当前为 --source ebird 单一源，不含「当季鸟种名录」"
-                     "（该名录依赖 iNaturalist 的历史记录聚合）；"
-                     "需要的话用 --source auto 同时取两个源。")
-
     merged.sort(key=lambda r: (r.get("date") or ""), reverse=True)
     merged = merged[:limit]
 
@@ -992,51 +806,6 @@ def cmd_bird(args):
     out("观鸟情报 - " + label + " - 半径 " + str(radius) + "km - 近 " + str(days) + " 天",
         payload, " + ".join(sources_used) or "（无）",
         note=BIRD_NOTE, disclaimer=BIRD_DISCLAIMER)
-    return 0
-
-
-def cmd_ebirdcheck(args):
-    """验证 eBird Token 是否可用，并实测本脚本实际依赖的端点。"""
-    token = resolve_ebird_token(getattr(args, "token", None))
-    print("=" * 62)
-    print("eBird Token 自检")
-    print("=" * 62)
-    if not token:
-        print("[FAIL] 未找到 Token（--token 与环境变量 " + " / ".join(EBIRD_TOKEN_ENV) + " 均为空）")
-        print("-" * 62)
-        print(EBIRD_TOKEN_HOWTO)
-        return 1
-    print("Token: " + token[:4] + "****" + token[-4:] if len(token) > 8 else "Token: ****")
-    print("-" * 62)
-    lat, lng = 37.50914, 122.11356
-    checks = [
-        ("近期观测 geo/recent", lambda: _ebird_rows(
-            ebird_geo_recent(lat, lng, 25, 14, token, max_results=10))),
-        ("珍稀鸟种 geo/recent/notable", lambda: _ebird_rows(
-            ebird_geo_recent(lat, lng, 25, 14, token, notable=True))),
-        ("观鸟热点 ref/hotspot/geo", lambda: ebird_hotspots(lat, lng, 25, token, 5)),
-    ]
-    ok = 0
-    for name, fn in checks:
-        try:
-            rows = fn()
-            ok += 1
-            print("  [OK]   " + name.ljust(28) + " 返回 " + str(len(rows)) + " 条")
-        except urllib.error.HTTPError as e:
-            tip = "Token 无效或过期" if e.code in (401, 403) else "HTTP " + str(e.code)
-            print("  [FAIL] " + name.ljust(28) + " " + tip)
-        except Exception as e:
-            print("  [FAIL] " + name.ljust(28) + " " + str(e)[:60])
-    print("-" * 62)
-    if ok == len(checks):
-        print("Token 可用（" + str(ok) + "/" + str(len(checks)) + " 个端点实测通过）。"
-              "之后运行 bird / birdspot 时会自动启用 eBird。")
-        return 0
-    if ok == 0:
-        print("Token 不可用。请重新申请：" + EBIRD_TOKEN_HOWTO)
-        return 1
-    print("部分端点通过（" + str(ok) + "/" + str(len(checks)) + "）。"
-          "eBird 偶尔会调整端点，失败的端点会自动降级到免 Key 源，不影响主流程。")
     return 0
 
 
@@ -1181,7 +950,6 @@ def cmd_birdinfo(args):
             "iNaturalist 物种页": "https://www.inaturalist.org/taxa/" + str(t.get("id"))
                                   + "（含照片与分布记录）",
             "中国观鸟记录中心": "https://www.birdreport.cn/（站内搜索物种名；无公开 API，人工查询）",
-            "eBird 全球观测地图": "https://ebird.org/explore（人工访问；脚本调用需免费 Token）",
             "鸟鸣识别": "本脚本不提供：xeno-canto 需 Key、Macaulay 有反爬。"
                         "建议用 Merlin Bird ID 或 BirdNET App 离线识别",
         },
@@ -1308,7 +1076,7 @@ def cmd_birdtime(args):
 
 
 def cmd_birdspot(args):
-    """附近观鸟地点：有 Token 时用 eBird 官方热点库，否则按真实记录密度排序。
+    """附近观鸟地点：按真实记录密度排序。
 
     默认只取近 30 天记录——这不是偷懒，是实测的取舍：
     iNat 的 /observations 端点在回溯 ≥180 天时响应体涨到 MB 级并被服务端缓慢滴流，
@@ -1318,30 +1086,10 @@ def cmd_birdspot(args):
     radius = max(1, min(int(args.radius), 200))
     limit = max(1, min(int(args.limit), 40))
     days = max(1, min(int(getattr(args, "days", 30) or 30), OBS_MAX_DAYS))
-    token = resolve_ebird_token(getattr(args, "token", None))
     notes = []
     if getattr(args, "days", None) and args.days > OBS_MAX_DAYS:
         notes.append("回溯天数已从 " + str(args.days) + " 收窄到 " + str(OBS_MAX_DAYS)
                      + " 天：实测 iNat 在更长窗口下响应过慢，会卡住几十秒。")
-
-    if token:
-        try:
-            spots = ebird_hotspots(lat, lng, min(radius, 50), token, limit)
-            out("附近观鸟热点（eBird 官方热点库） - " + label
-                + " - 半径 " + str(min(radius, 50)) + "km",
-                {"location": label, "radius_km": min(radius, 50),
-                 "hotspot_count": len(spots), "hotspots": spots,
-                 "data_note": "鸟种数 = 该热点历史累计记录鸟种数；热点由 eBird 审核，"
-                              "地点名比用户自由填写更规范。",
-                 "notes": notes},
-                "api.ebird.org /ref/hotspot/geo", note=BIRD_NOTE,
-                disclaimer=BIRD_DISCLAIMER)
-            return 0
-        except urllib.error.HTTPError as e:
-            notes.append("eBird 热点端点失败（HTTP " + str(e.code) + "），"
-                         "已回退到 iNaturalist 记录密度。")
-        except Exception as e:
-            notes.append("eBird 热点端点失败（" + str(e)[:60] + "），已回退。")
 
     try:
         rows, total = inat_recent_birds(lat, lng, radius, days, 100)
@@ -1426,12 +1174,6 @@ def cmd_selftest(args):
          "https://api.gbif.org/v1/occurrence/search?taxonKey=212&year=2025,2026&limit=1",
          None, True),
     ]
-    eb_token = resolve_ebird_token(getattr(args, "token", None))
-    eb_url = ("https://api.ebird.org/v2/data/obs/geo/recent?lat=" + str(LAT)
-              + "&lng=" + str(LNG) + "&dist=25&back=7")
-    checks.append(("eBird 增强", "api.ebird.org（需免费 Token）", eb_url,
-                   {"X-eBirdApiToken": eb_token or "NO-TOKEN"}, False))
-
     print("=" * 62)
     print("接口自检 - travel-orchestrator nature_forecast v" + VERSION)
     print("=" * 62)
@@ -1446,9 +1188,7 @@ def cmd_selftest(args):
                 detail = "keys=" + ",".join(list(data)[:4])
         except urllib.error.HTTPError as e:
             if e.code in (401, 403) and not required:
-                status = "NEED-TOKEN"
-                detail = ("未配置 Token（非必需）" if not eb_token
-                          else "HTTP " + str(e.code) + "（Token 可能无效，运行 ebirdcheck 验证）")
+                status, detail = "NEED-TOKEN", "该源可选，未配置"
             else:
                 status, detail = "FAIL", "HTTP " + str(e.code)
         except Exception as e:
@@ -1459,8 +1199,7 @@ def cmd_selftest(args):
         print(mark + " " + name.ljust(14) + " " + source.ljust(30) + " " + detail)
     print("-" * 62)
     print("通过 " + str(ok_count) + "/" + str(len(checks))
-          + " 项（NEED-TOKEN 计入通过：eBird 是可选的增强源）")
-    print("观鸟默认免注册；如需 eBird 全部能力，申请免费 Token 后运行 ebirdcheck 验证")
+          + " 项（NEED-TOKEN 计入通过）")
     print("已停用: sunsetbot.top（域名下线）/ cnss.com.cn tideJson（404）"
           "/ macaulaylibrary.org（反爬）/ xeno-canto.org（需 Key），均已替代或改为人工查询")
     return 0 if ok_count >= len(checks) - 1 else 1
@@ -1499,15 +1238,9 @@ def build_parser():
 
     p_bird = sub.add_parser("bird", help="观鸟近期观测（默认免注册）")
     add_place(p_bird)
-    p_bird.add_argument("--token", default=None,
-                        help="eBird Token（可选；也可用环境变量 EBIRD_API_TOKEN）")
-    p_bird.add_argument("--source", default="auto", choices=["auto", "inat", "gbif", "ebird"],
-                        help="auto=有Token时 eBird+iNaturalist，否则 iNaturalist；默认 auto")
     p_bird.add_argument("--days", type=int, default=14, help="回溯天数 1-365，默认 14")
     p_bird.add_argument("--radius", type=int, default=25, help="半径 km 1-200，默认 25")
     p_bird.add_argument("--limit", type=int, default=20, help="最多返回记录数 1-100，默认 20")
-    p_bird.add_argument("--region", default="CN", help="eBird 区域码，仅 --source ebird 且无城市时用")
-    p_bird.add_argument("--back", type=int, default=7, help="（旧参数）等同 --days 的 eBird 回溯")
 
     p_species = sub.add_parser("species", help="当季鸟种名录（免注册）")
     add_place(p_species)
@@ -1524,17 +1257,14 @@ def build_parser():
     add_place(p_btime)
     p_btime.add_argument("--date", default=None, help="日期 YYYY-MM-DD，默认未来 3 天")
 
-    p_spot = sub.add_parser("birdspot", help="附近观鸟地点（有Token用eBird热点库）")
+    p_spot = sub.add_parser("birdspot", help="附近观鸟地点（按真实记录密度）")
     add_place(p_spot)
-    p_spot.add_argument("--token", default=None, help="eBird Token（可选）")
     p_spot.add_argument("--radius", type=int, default=30, help="半径 km 1-200，默认 30")
     p_spot.add_argument("--days", type=int, default=30,
                         help="回溯天数 1-90，默认 30（上限 90：更长窗口实测会卡住）")
     p_spot.add_argument("--limit", type=int, default=10, help="最多返回地点数 1-40，默认 10")
     p_spot.add_argument("--dist", type=float, default=None, help="（旧参数）等同 --radius")
 
-    p_ebc = sub.add_parser("ebirdcheck", help="验证 eBird Token 并实测本脚本用到的端点")
-    p_ebc.add_argument("--token", default=None, help="eBird Token；不传则读环境变量")
 
     sub.add_parser("selftest", help="检测所有接口可用性")
     return parser
@@ -1552,7 +1282,6 @@ def main(argv=None):
         "tide": cmd_tide, "sun": cmd_sun, "astro": cmd_astro,
         "glow": cmd_glow, "bird": cmd_bird, "species": cmd_species,
         "birdinfo": cmd_birdinfo, "birdtime": cmd_birdtime,
-        "birdspot": cmd_birdspot, "ebirdcheck": cmd_ebirdcheck,
         "selftest": cmd_selftest,
     }
     try:

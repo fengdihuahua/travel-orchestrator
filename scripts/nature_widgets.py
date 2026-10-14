@@ -3,11 +3,14 @@
 """
 nature_widgets.py · travel-orchestrator 自然专项的交互小部件（只用标准库）
 
-给渲染器提供四件「能点、能看」的东西：
+给渲染器提供这些「能点、能看」的东西：
   1. species_list  —— 鸟种卡：展开看学名/科属/保护等级/简介，并给出查图与图鉴的外链
   2. star_section  —— 星图：真算地平坐标（儒略日 → 恒星时 → 时角 → 高度/方位），配月亮相位盘
   3. sun_section   —— 天光条（蓝调/黄金/日出日落整条天色）+ 霞光（火烧云）指数
   4. tide_section  —— 潮汐图：点曲线上的圆点，换该时刻的潮位与下滩建议
+  5. booking_links —— 按「要订什么」给平台入口：火车票给携程车次列表、门票给去哪儿
+     门票列表（都是真实票价页），酒店给携程订房页，其余给点评/美团关键词搜索
+  6. route_stops   —— 全行程停靠点 + 全局编号的唯一实现（动线图 / 清单 / 导览海报共用）
 
 输出全是内联 SVG 与纯 HTML：没有 <script>，不引任何远程资源，双击 HTML 就能用。
 交互用原生 <details> 和 <input type="radio"> + CSS 兄弟选择器实现，不写一行脚本。
@@ -25,11 +28,12 @@ import re
 from datetime import datetime
 from urllib.parse import quote
 
-__version__ = "1.3.0"
+__version__ = "1.4.0"
 
 __all__ = [
     "map_url", "map_link", "place_links", "booking_links", "link_chips",
-    "route_url", "markers_url", "project_points", "num", "search_keyword",
+    "route_url", "markers_url", "project_points", "route_stops", "num",
+    "search_keyword",
     "MARKER_LIMIT",
     "species_list", "split_species_text",
     "star_section", "sun_section", "tide_section", "silhouette_svg",
@@ -39,14 +43,26 @@ AMAP = "https://uri.amap.com/search?keyword="
 NAV = "https://uri.amap.com/navigation?"
 MARKERS = "https://uri.amap.com/marker?"
 
-# 生活服务平台的**搜索页**入口（不是 API，不需要 Key，也不需要账号）。
-# 只放实测能打开、且 URL 结构不含易失效编号的：
-#   大众点评 /search/keyword/0/0_<词>  ——  实测 200
-#   美团 i.meituan.com/s/<词>          ——  实测 200
-# 携程被有意排除：它的酒店列表要数字城市 ID（?city=7 这种），
-# 映射表会过期；关键词页又要登录。宁可少一个，别给用户一个点开是 404 的按钮。
+# 生活服务平台的入口（不是 API，不需要 Key，也不需要账号）。
+# 放进来的每一条都经过实测（2026-10-09，浏览器/WebFetch 双通道），
+# 且 URL 结构不含易失效编号；测下来打不开的直接不进表：
+#   大众点评 /search/keyword/0/0_<词>      —— 全站关键词搜索（桌面端可用）
+#   美团 i.meituan.com/s/<词>              —— 移动端 H5 搜索（桌面端会退化到首页，
+#                                            所以只当兜底第二入口，不给它扛主链接）
+#   去哪儿门票 touch.piao.qunar.com/...    —— 真实门票列表页：票价、店铺、预订按钮
+#                                            都在，关键词直达
+#   携程火车票 trains.ctrip.com/...        —— 真实车次列表页：余票、票价、预订按钮
+#                                            都在，需要 from/to/date 三个参数
+#   携程酒店 m.ctrip.com/webapp/hotel/...  —— H5 订房搜索页，需要 city（可带入住/离店）
+#   12306 官网                             —— 火车票没给全参数时的官方兜底
+# 曾被验证为死链而排除的：美团 awp/hfe 酒店/门票页（404）、
+# 去哪儿 touch.qunar.com/h5/hotel/hotellist（跳首页）、携程机票 online/list（落促销页）。
 DIANPING = "https://www.dianping.com/search/keyword/0/0_"
 MEITUAN = "https://i.meituan.com/s/"
+QUNAR_PIAO = "https://touch.piao.qunar.com/touch/list.htm?keyword="
+CTRIP_TRAIN = "https://trains.ctrip.com/webapp/train/list"
+CTRIP_HOTEL = "https://m.ctrip.com/webapp/hotel/hotelsearch"
+RAIL_12306 = "https://www.12306.cn/index/"
 
 _BOOK_PLATFORMS = (
     ("大众点评", DIANPING),
@@ -156,21 +172,63 @@ def map_link(place, keyword=None):
 
 # ------------------------------------------------- 生活服务：点评 / 团购搜索
 
-def booking_links(keyword, kind="food"):
-    """关键词 → [(平台名, 搜索页链接)]，用来「精准查这家店 / 这个票 / 这片住宿」。
+def booking_links(keyword, kind="food", extra=None):
+    """按「要订什么」给平台入口 → [(平台名, 链接)]。
 
-    这里给的是**搜索页**：用户点进去看到的是该平台上这个词的实时结果
-    （价格、营业状态、评价都在平台自己那儿更新）。方案里写死的价格会过期，
-    链接不会——所以方案只给方向，价格让平台说。
+    v1.4.0 起 kind 不再只影响排序，而是决定**链接落在哪个页面**：
+      train（火车票）——extra 给了 from/to/date 时直达携程车次列表页
+                       （真实余票与票价）；缺参数时给 12306 官网兜底
+      ticket（门票）——去哪儿门票列表页打头（真实票价），点评/美团搜索兜底
+      hotel（住宿）——extra 给了 city 时加携程订房页（可带 checkin/checkout），
+                      点评/美团搜这家店兜底
+      food（默认）——点评 + 美团关键词搜索（原行为）
 
-    kind 目前只影响排序，不改变链接形态；保留这个参数是为了以后按类目扩平台
-    （比如门票类想加点评以外的入口）。
+    extra 是数据里 booking 对象本身（字典）：可带 from/to/date/city/checkin/checkout。
+    方案里写死的价格会过期，链接不会——所以方案只给方向，价格让平台说。
     """
     kw = str(keyword or "").strip()
-    if len(kw) < 2:
-        return []
-    base = _BOOK_PLATFORMS if kind != "hotel" else tuple(reversed(_BOOK_PLATFORMS))
-    return [(label, tpl + quote(kw)) for label, tpl in base]
+    ex = extra if isinstance(extra, dict) else {}
+    kind = str(kind or "food")
+    links = []
+
+    if kind == "train":
+        f_, t_, d_ = (str(ex.get(k) or "").strip() for k in ("from", "to", "date"))
+        if len(f_) >= 2 and len(t_) >= 2 and re.match(r"^\d{4}-\d{2}-\d{2}$", d_):
+            links.append(("携程火车票",
+                          CTRIP_TRAIN + "?dStation=" + quote(f_)
+                          + "&aStation=" + quote(t_) + "&dDate=" + d_))
+        else:
+            # 没给全参数就指官方售票口，别拿关键词去美食平台搜火车票
+            links.append(("12306 官网", RAIL_12306))
+        return links
+
+    if kind == "ticket" and len(kw) >= 2:
+        links.append(("去哪儿门票", QUNAR_PIAO + quote(kw)))
+    elif kind == "hotel":
+        city = str(ex.get("city") or "").strip()
+        if len(city) >= 2:
+            qs = ["cityname=" + quote(city)]
+            checkin = str(ex.get("checkin") or ex.get("date") or "").strip()
+            if re.match(r"^\d{4}-\d{2}-\d{2}$", checkin):
+                qs.append("checkin=" + checkin)
+                checkout = str(ex.get("checkout") or "").strip()
+                if not re.match(r"^\d{4}-\d{2}-\d{2}$", checkout):
+                    try:
+                        checkout = (datetime.strptime(checkin, "%Y-%m-%d")
+                                    + __import__("datetime").timedelta(days=1)
+                                    ).strftime("%Y-%m-%d")
+                    except ValueError:
+                        checkout = ""
+                if checkout:
+                    qs.append("checkout=" + checkout)
+            links.append(("携程订房", CTRIP_HOTEL + "?" + "&".join(qs)))
+
+    # 关键词搜索兜底：点评始终第一，酒店类把美团提前（订房在美团比点评顺）
+    if len(kw) >= 2:
+        base = (tuple(reversed(_BOOK_PLATFORMS))
+                if kind == "hotel" else _BOOK_PLATFORMS)
+        links.extend((label, tpl + quote(kw)) for label, tpl in base)
+    return links
 
 
 def link_chips(links, cls="bk"):
@@ -291,6 +349,61 @@ def project_points(points, width=640, height=300, pad=34):
     return out
 
 
+def project_route(points, radius=0.045):
+    """坐标**单一真源**：经纬度 → 归一化画布坐标（0~1，y 向下），全项目共用。
+
+    攻略页的动线示意图（render_plan._routemap）和导览海报（poster）都调这一个
+    函数，再各自乘自己的画布宽高。**这就是「图上第 5 个点」在两张图上指的是
+    同一个位置**的原因——位置一旦各算各的，两图永远对不上。
+
+    points 每项 (lng, lat, name)，与 project_points 一致。
+    返回 [(u, v, lng, lat, name)]，u/v ∈ [0,1]。
+
+    做法与 project_points 同源（等距圆柱 + cos(纬度) 收缩 + 等比缩放居中，
+    北在上），额外做一步**去重叠**：靠得太近的点（<radius 直径）互相推开，
+    免得密集区（如港码头/樱花湖那一簇）糊成一团。推开幅度很小，只为看得清，
+    大致方位仍然保真——威河站还是在西北角。
+    """
+    ps = [p for p in (_pt(x) for x in (points or [])) if p]
+    if not ps:
+        return []
+    # 先在 [0,1]×[0,1] 内投影（pad 留 6% 安全边）
+    pad = 0.06
+    proj = project_points([(p[0], p[1], p[2]) for p in ps],
+                          width=1000, height=1000, pad=pad * 1000)
+    out = [[p[0] / 1000.0, p[1] / 1000.0, p[2], p[3], p[4]] for p in proj]
+    if len(out) < 2:
+        return [(round(p[0], 6), round(p[1], 6), p[2], p[3], p[4]) for p in out]
+    # 去重叠：归一化坐标系里的力导向摊开（拉回弱、幅度小）
+    md = radius
+    for _ in range(220):
+        moved = False
+        for i in range(len(out)):
+            for j in range(i + 1, len(out)):
+                dx = out[j][0] - out[i][0]
+                dy = out[j][1] - out[i][1]
+                d2 = dx * dx + dy * dy
+                if d2 >= md * md:
+                    continue
+                if d2 <= 1e-12:
+                    out[j][0] += md * .5
+                    moved = True
+                    continue
+                d = math.sqrt(d2)
+                push = (md - d) / d * .5 * .45
+                out[i][0] -= dx * push
+                out[i][1] -= dy * push
+                out[j][0] += dx * push
+                out[j][1] += dy * push
+                moved = True
+        for p in out:
+            p[0] = min(max(p[0], pad * .5), 1 - pad * .5)
+            p[1] = min(max(p[1], pad * .5), 1 - pad * .5)
+        if not moved:
+            break
+    return [(round(p[0], 6), round(p[1], 6), p[2], p[3], p[4]) for p in out]
+
+
 def _split_places(text):
     return [p.strip() for p in re.split(r"[、,，;；/|]+", str(text or "")) if p.strip()]
 
@@ -324,6 +437,46 @@ def place_links(value, sep=""):
             one += '<span class="pl-note">' + _e(note) + "</span>"
         chunks.append('<span class="pl-item">' + one + "</span>")
     return ('<span class="pl">' + sep.join(chunks) + "</span>") if chunks else ""
+
+
+def route_stops(it, detail=False):
+    """全行程停靠点 + 全局序号 —— 编号规则的**唯一**实现。
+
+    同一天里同名地点只算一次，跨天连续编号。HTML 的动线图、MD 的动线清单、
+    逐日列表、导览海报全读这一份结果，才不会出现「图上第 5 个点」和
+    「清单第 5 条」指两处。渲染器里的 _stops() 只是这里的薄封装。
+
+    it 传 itinerary（字典）。返回 (rows, total)：rows 是
+    [(day_id, [条目, ...]), ...]，只保留有停靠点的天；total 是最大的那个全局序号。
+    条目默认是 (name, seq, lat, lng)；detail=True 时追加 (title, kind)，
+    导览海报用它给每个点配「特色一句话」和小图标——编号逻辑只有这一份，不复制。
+    lat/lng 取不到（没填 geo 或写了坏值）时是 None。
+    """
+    def _objs(v):
+        return [x for x in (v or []) if isinstance(x, dict)]
+
+    rows, seq = [], 0
+    for idx, d in enumerate(_objs((it or {}).get("days")), 1):
+        did = d.get("day_id") or "D" + str(idx)
+        stops = []
+        for i in _objs(d.get("items")):
+            name = str(i.get("place") or "").strip()
+            # 编号规则与渲染层 _blank_item 一致：place 非空就占一个序号
+            # （place 一空，title/time/notes/kind 全填了也无处落点）
+            if not name:
+                continue
+            if any(name == s[0] for s in stops):
+                continue
+            geo = i.get("geo") if isinstance(i.get("geo"), dict) else {}
+            seq += 1
+            item = (name, seq, _num(geo.get("lat")), _num(geo.get("lng")))
+            if detail:
+                item += (str(i.get("title") or "").strip(),
+                         str(i.get("kind") or "").strip())
+            stops.append(item)
+        if stops:
+            rows.append((did, stops))
+    return rows, seq
 
 
 # ---------------------------------------------------------------- 鸟种剪影
@@ -577,7 +730,7 @@ def _species_links(sp, name, compact):
     links.append((taxa, "图鉴页"))
     links.append(("https://image.baidu.com/search/index?tn=baiduimage&word=" + q, "查图片"))
     links.append(("https://www.birdreport.cn/", "本地记录"))
-    links.append(("https://ebird.org/explore", "全球地图"))
+    links.append(("https://www.birdreport.cn/", "观测记录中心"))
     if compact:
         links = links[:2]
     out = "".join(

@@ -76,7 +76,7 @@ import shutil
 import sys
 from datetime import datetime, timedelta
 
-VERSION = "1.3.0"
+VERSION = "1.4.0"
 
 # 渲染器/红方复核都依赖的最小结构（缺了必然报错，所以先在这里拦住）
 REQUIRED_TOP = {
@@ -812,7 +812,6 @@ def build_parser():
     r.add_argument("--out", default=None, help="--write-json 的目标路径")
     r.add_argument("--force", action="store_true",
                    help="结构校验不通过也渲染（不推荐）")
-
     sp = sub.add_parser("split", help="把大 trip.json 拆成 parts/*.json")
     sp.add_argument("trip_json", help="要拆的 trip.json")
     sp.add_argument("--trip-dir", default=None,
