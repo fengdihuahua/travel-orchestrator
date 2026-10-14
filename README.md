@@ -52,16 +52,16 @@
 
 ## 安装
 
-把整个目录复制到 WorkBuddy 的用户 skill 目录即可：
+用自带的安装脚本，按宿主装到对应位置：
 
 ```bash
-# 方式一：用自带的安装脚本
-python tools/install.py
-
-# 方式二：手动复制到
-#   Windows   %USERPROFILE%\.workbuddy\skills\travel-orchestrator
-#   macOS/Linux  ~/.workbuddy/skills/travel-orchestrator
+python tools/install.py              # WorkBuddy → %USERPROFILE%\.workbuddy\skills\travel-orchestrator
+python tools/install.py --host kimi  # Kimi Work → %APPDATA%\kimi-desktop\daimon-share\daimon\skills\travel-orchestrator
+python tools/install.py --dest <目录> # 装到任意指定位置
 ```
+
+SKILL.md 本身遵循通用 skill 约定（frontmatter 只有 `name` + `description` 是跨宿主公认的），
+其他宿主（Claude Code、Cursor 等）手动把整个目录复制到它们的 skill 目录即可。
 
 装完重启会话生效。**不需要装任何 Python 包**，标准库够用。
 
@@ -69,7 +69,7 @@ python tools/install.py
 
 ## 快速开始
 
-对 WorkBuddy 说一句就行：
+对装了它的宿主（WorkBuddy / Kimi）说一句就行：
 
 > 帮我规划 10 月 1 日到 2 日去威海，两个人，预算 2500，想赶海和观鸟。
 
@@ -237,7 +237,7 @@ travel-orchestrator/
 ```bash
 python tools/pack.py            # 打 zip 到 .workbuddy/dist/，自带 frontmatter、体积、目录层级检查
 python tools/verify_all.py      # 编译+测试+红方+渲染+一致性
-python tools/install.py         # 同步到 skill 目录（增量，不会删空重装）
+python tools/install.py         # 同步到 skill 目录（增量，不会删空重装；--host kimi 装到 Kimi）
 ```
 
 `tools/pack.py` 会盯住三件平台约束：包内有 `SKILL.md`、体积不超 3 MB、

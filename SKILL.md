@@ -6,7 +6,7 @@ display_name_en: Travel Orchestrator
 category: productivity
 description_zh: "带红方复核的旅行规划：先把潮汐、日出、月落这些改不了的时刻锁死，再倒推整条动线。开场是逐层访谈而不是问卷，自然观察专项（观鸟 / 观星 / 日出 / 赶海）先做可行性核查再决定排不排，交付前由质疑方逐项挑刺，每个数字都能追到来源。产出同源的 Markdown 攻略与单文件离线 HTML 攻略页；AI 一层绘制的手绘地图海报作为可选项按需输出。"
 description_en: "Travel planning with an adversarial review pass: lock the moments that cannot move (tide, sunrise, moonset), then work the route backwards. Opens with a layered interview instead of a form, checks feasibility before scheduling any nature activity, and runs an adversarial pass before delivery. Every number traces back to a source. Ships a Markdown guide and a single-file offline HTML page; an AI-drawn hand-painted map poster is opt-in."
-version: 4.15.4
+version: 4.16.0
 author: travel-orchestrator
 agent_created: true
 ---
@@ -153,7 +153,8 @@ python scripts/red_team.py check travel-plan/<trip_id>   # 目录或 trip.json �
 
 - **待办提醒**：checklist（预约渠道/截止时间/未解决怎么办 六段式）+ 专项清单（观鸟设备、观星保暖、日出占位、赶海装备）
 - **待办的"完成状态"由宿主承接，不在攻略页上勾**（离线页勾了不落盘＝假状态）。分两层：
-  1. **带截止时间的必办项落成宿主的定时提醒（automation）**：**要问但不单独占一轮**——在
+  1. **带截止时间的必办项落成宿主的定时提醒能力**：宿主是 Kimi 就用 Blueprint 定时任务
+     （local_conversation），是 WorkBuddy 就用 automation，都没有就只交清单不建提醒。**要问但不单独占一轮**——在
      「需求共识」确认后或交付话术末尾顺口问一句（默认不建）。同意后每条建一条，`scheduledAt`
      取该条截止时间（"出发前 X 天"先换算成绝对日期），prompt 写清要办的事、截止时间、`if_unresolved`；
      落完告诉用户"哪些已设、何时会响"；要求取消时逐条删
@@ -169,8 +170,8 @@ python scripts/red_team.py check travel-plan/<trip_id>   # 目录或 trip.json �
   - **单文件 HTML 攻略页**（.html，双击可开、离线可用、无 CDN、无脚本、可直接打印）。
     页里有**逐日停靠点清单**（点名字即跳高德搜索）与两个跳转按钮；**本页不画行程轨迹图**，
     也**不放任何海报入口**。
-- 🔴 **交付前必须先问一句「要不要海报」——这是必问项，不是可选项**（海报只有下面这一种，
-  由 AI 一层绘制）；用户说不生成就不生成，但不能不问。
+- **海报是可选项，不强制问**：只有用户主动要、或交付时顺口提一句「还可以加一张 AI 手绘地图海报」
+  被接住，才进入下面的 AI 一层绘制流程；不要为海报单独开一轮确认。
 - **AI 一层绘制海报**（可选，高保真手绘版）：`python scripts/poster_ai.py <方案目录> --day N --out _tmp/ai`
   → `sketch.png`（骨架）+ `prompt.txt`（提示词）+ `meta.json`；把骨架当**底稿**交给图像模型
   （`image1=sketch.png`、`input_fidelity="high"`、`size="1024x1536"`、`prompt` 取 `prompt.txt` 全文），
@@ -245,8 +246,7 @@ python scripts/red_team.py check travel-plan/<trip_id>   # 目录或 trip.json �
 ### 交付物
 
 - **默认两份**：Markdown 攻略 + 单文件 HTML 攻略页，交付时把两个路径都给出来。
-- **海报是可选件，但「问不问」不是可选的**：交付前**一定要问一句要不要海报**
-  （AI 一层绘制的手绘地图），这是必问项。用户说不生成就不生成，只是不能不问。
+- **海报可选**：用户提到才做，或交付时作为可选项顺口提一句即可，不设强制确认环节。
 
 ## 注意事项
 
@@ -281,7 +281,9 @@ python scripts/red_team.py check travel-plan/<trip_id>   # 目录或 trip.json �
 
 ---
 
-*v4.15.4 | travel-orchestrator：主流程 S1-S10 全编排 + S6.5 红方复核（对抗式挑刺）+
+*v4.16.0 | travel-orchestrator：多宿主通用化（WorkBuddy / Kimi 双端安装）+
+撤掉强制问海报的对话门（改为主动才做、可顺口提一句）+
+主流程 S1-S10 全编排 + S6.5 红方复核（对抗式挑刺）+
 自然观察专项按需触发（观鸟 / 观星 / 日出 / 赶海，含火烧云评分）+ 反幻觉溯源 + 去 AI 味交付*
 
 *完整变更历史见 [CHANGELOG.md](CHANGELOG.md)。*
