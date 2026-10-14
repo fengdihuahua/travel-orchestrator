@@ -29,7 +29,7 @@
     },
     {
       "fact_id": "f4",
-      "claim": "荣成大天鹅保护区近期记录到黑嘴鸥、蛎鹬等水鸟（未用 eBird Token 复核）",
+      "claim": "荣成大天鹅保护区近期记录到黑嘴鸥、蛎鹬等水鸟（未用官方接口复核）",
       "value": null,
       "status": "unverified",
       "source_ids": [
