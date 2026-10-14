@@ -1,22 +1,22 @@
 ---
 name: travel-orchestrator
-description: 旅行规划总编排（完全自包含，含自然观察专项 + 红方复核）。当用户需要一次完整旅行方案，或需求涉及行程规划、观鸟/观星/日出/赶海等自然观察、美食推荐、预算规划、灵感推荐、待办提醒、踩坑指南时调用。以完整工作流（需求澄清→灵感→调研→天气→自然专项→行程→核查→红方复核→交付→出发前复核）驱动全程，不依赖任何其他 skill；内置实时免费数据接口（鸟况/月相/日出日落/潮汐/霞光）、可执行的 red_team.py 规则引擎、反幻觉溯源与 MD+HTML 同源渲染交付。适用于国内/出境自由行、亲子游、自驾游、周末短途。
+description: 旅行规划总编排（含自然观察专项 + 红方复核）。当用户需要一次完整旅行方案，或需求涉及行程规划、观鸟/观星/日出/赶海等自然观察、美食推荐、预算规划、灵感推荐、待办提醒、踩坑指南时调用。以完整工作流（需求澄清→灵感→调研→天气→自然专项→行程→核查→红方复核→交付→出发前复核）驱动全程；内置实时免费数据接口（鸟况/月相/日出日落/潮汐/霞光）、可执行的 red_team.py 规则引擎、反幻觉溯源与 MD+HTML 同源渲染交付。适用于国内/出境自由行、亲子游、自驾游、周末短途。
 display_name: 旅行规划总编排
 display_name_en: Travel Orchestrator
 category: productivity
-description_zh: "带红方复核的旅行规划：先把潮汐、日出、月落这些改不了的时刻锁死，再倒推整条动线。开场是逐层访谈而不是问卷，自然观察专项（观鸟 / 观星 / 日出 / 赶海）先做可行性核查再决定排不排，交付前由质疑方逐项挑刺，每个数字都能追到来源。产出同源的 Markdown 攻略与单文件离线 HTML 攻略页。"
-description_en: "Travel planning with an adversarial review pass: lock the moments that cannot move (tide, sunrise, moonset), then work the route backwards. Opens with a layered interview instead of a form, checks feasibility before scheduling any nature activity, and runs an adversarial pass before delivery. Every number traces back to a source. Ships a Markdown guide plus a single-file offline HTML page."
-version: 4.10.0
+description_zh: "带红方复核的旅行规划：先把潮汐、日出、月落这些改不了的时刻锁死，再倒推整条动线。开场是逐层访谈而不是问卷，自然观察专项（观鸟 / 观星 / 日出 / 赶海）先做可行性核查再决定排不排，交付前由质疑方逐项挑刺，每个数字都能追到来源。产出同源的 Markdown 攻略与单文件离线 HTML 攻略页；AI 一层绘制的手绘地图海报作为可选项按需输出。"
+description_en: "Travel planning with an adversarial review pass: lock the moments that cannot move (tide, sunrise, moonset), then work the route backwards. Opens with a layered interview instead of a form, checks feasibility before scheduling any nature activity, and runs an adversarial pass before delivery. Every number traces back to a source. Ships a Markdown guide and a single-file offline HTML page; an AI-drawn hand-painted map poster is opt-in."
+version: 4.15.4
 author: travel-orchestrator
 agent_created: true
 ---
 
-# Travel Orchestrator：旅行规划总编排（完全自包含）
+# Travel Orchestrator：旅行规划总编排
 
-把一次旅行需求从「想去」变成「一份能直接出发的完整方案」。**完全自包含，不依赖任何其他 skill**：
+把一次旅行需求从「想去」变成「一份能直接出发的完整方案」：
 需求澄清 → 灵感推荐 → 实时调研 → 天气研判 → 自然观察专项 → 行程编排 → 核查 → 红方复核 → 待办/踩坑 → 成品交付 → 出发前复核。
 差异化在观鸟 / 观星 / 日出 / 赶海 四大自然专项与那套免费实时接口；交付由 `scripts/render_plan.py` 从同一份数据
-同源渲染 Markdown 攻略 + 单文件离线 HTML 攻略页，不需要任何外部脚本。
+同源渲染 Markdown 攻略 + 单文件离线 HTML 攻略页。
 
 ## 数据诚实原则（本 skill 的底层准则）
 
@@ -31,7 +31,7 @@ agent_created: true
 6. **先核查后交付，交付前必过红方**：结构+时间+预算+溯源检查完成后，再由红方逐项挑刺；
    blocking 未清零不得标为可执行，方案状态如实标注（draft/conditional/executable_as_of_check）
 7. **版本存档**：每次调整保留旧版本（整目录快照 `versions/vN/`），可回退、可比较
-8. **不增加注册门槛**：优先用免费 API 与宿主已有工具；eBird Token 可选（无 Token 也能完成全部基础流程）
+8. **不增加注册门槛**：优先用免费 API 与宿主已有工具，全流程免注册即可跑完
 9. **时效性自检**：潮汐/日出/月相/天气四类数据一天一变，来源超过 30 天即视为过期，必须重新取数
 10. **文案去 AI 味**：交付文案按 `references/writing-style.md` 写，具体优先、口令化、不写空话
 
@@ -163,9 +163,22 @@ python scripts/red_team.py check travel-plan/<trip_id>   # 目录或 trip.json �
 
 ### S8 成品交付（内置渲染器）
 
-- `python scripts/build_trip.py render travel-plan/<trip_id>` → 合并分片 + 结构校验 + 渲染一条龙：
+- `python scripts/build_trip.py render travel-plan/<trip_id>` → 合并分片 + 结构校验 + 渲染一条龙，
+  **默认只出两份**：
   - **Markdown 完整攻略**（.md）
-  - **单文件 HTML 攻略页**（.html，双击可开、离线可用、无 CDN、无脚本、可直接打印）
+  - **单文件 HTML 攻略页**（.html，双击可开、离线可用、无 CDN、无脚本、可直接打印）。
+    页里有**逐日停靠点清单**（点名字即跳高德搜索）与两个跳转按钮；**本页不画行程轨迹图**，
+    也**不放任何海报入口**。
+- 🔴 **交付前必须先问一句「要不要海报」——这是必问项，不是可选项**（海报只有下面这一种，
+  由 AI 一层绘制）；用户说不生成就不生成，但不能不问。
+- **AI 一层绘制海报**（可选，高保真手绘版）：`python scripts/poster_ai.py <方案目录> --day N --out _tmp/ai`
+  → `sketch.png`（骨架）+ `prompt.txt`（提示词）+ `meta.json`；把骨架当**底稿**交给图像模型
+  （`image1=sketch.png`、`input_fidelity="high"`、`size="1024x1536"`、`prompt` 取 `prompt.txt` 全文），
+  最后裁掉右下角水印（约底部 4.5%）。加 `--plain` 则走**纯文字版**：不传骨架，
+  位置全靠提示词写死（实测位置比骨架版准）。
+  🔴 出图后**照着 `checklist.txt` 逐字对比**（地名/题签/行程），有一处不对就重生成。
+  🔴 **开工前必读 `references/poster-ai-spec.md`**（唯一口径，末尾一节
+  列了不要用的做法）；跑完必须打印「两两方位自检：N 项，错 0 项 ✅」才可生图
 - 只渲染也行：`python scripts/render_plan.py travel-plan/<trip_id>`（同样直接读目录，不要求先组装）
 - `python scripts/render_plan.py <目录或 trip.json> --check` 确认产物一致性（存在、署名、无远程资源、关键数字未丢失）
 - 🔴 **结构不过不出图**：渲染前按 build_trip 的规则先校验结构（缺字段 / item_id 重复 / 预算倒挂等），
@@ -203,48 +216,17 @@ python scripts/red_team.py check travel-plan/<trip_id>   # 目录或 trip.json �
 
 ## 自然观察专项（⭐ 按需触发模块）
 
-**触发规则**：专项是 **S1 访谈 L3 的一个环节，不是单独的问卷**。拿到队里的人和日期之后**先跑一遍可行性核查**
-（`nature_forecast.py`），再按三档如实告诉用户、让他自己选：条件好 → 问做不做；
-条件一般（月照强、潮位一般）→ 说清代价再问值不值得专门排；**做不了 → 直说做不了并给替代**。
-用户不感兴趣的项直接跳过，不影响主流程。展开后优先调实时数据接口（`references/nature-apis.md`
-+ `scripts/nature_forecast.py`），结论以事实记录并入 `facts` 分片。
+**触发规则**：专项是 **S1 访谈 L3 的一个环节，不是单独的问卷**。拿到队里的人和日期后**先跑可行性核查**
+（`nature_forecast.py`），再按三档如实说：条件好 → 问做不做；条件一般 → 说清代价再问值不值得专门排；
+**做不了 → 直说做不了并给替代**。用户不感兴趣的直接跳过，不影响主流程。
+⛔ **不许为了「满足用户」硬排一个玩不到的项目**（鸟种不在季、目标在地平线下、那天没有潮汐窗口…），
+别等用户到了当地才发现。
 
-两条省时间的规矩（详见 `references/intake-interview.md` §L3）：**可行性数据一次并行查完**，别一项一项等
-（`tide`/`astro`/`sun`/`glow` 互相独立）；**每个专项最多问 2 问**，装备作息这类能推默认值的不要单独占一轮。
+**命令、降级规则、渲染层字段表全部在 `references/nature-special.md`** —— 写相关分片前先读它。两条最常踩的：
 
-⛔ **不许为了"满足用户"硬排一个玩不到的项目**：目标鸟种不在该季节、观测目标在地平线下、
-那天没有潮汐窗口、根本不是流星雨季——都要在访谈里说清，别等用户到了当地才发现。
-
-**五个取数命令**（接口清单/算法/降级规则/已停用清单见 `references/nature-apis.md`；
-鸟种季节表、波特尔分级、滩涂类型、摄影建议等知识见 `nature-knowledge.md`）：
-
-| 专项 | 命令 | 不能忘的 |
-|---|---|---|
-| 观鸟 | `nature_forecast.py bird --region CN-XX [--token ..]`、`birdspot` 查 25km 内热点 | 无 Token 时提示去 ebird.org/api/keygen 免费申请（~1000 次/天），或降级 web 搜索；识别鸟用 BirdNET（无录音也能 `predict(纬,经,week)` 预测） |
-| 观星 | `nature_forecast.py astro --lat .. --lng ..` | cyclecalcs.com 免费无 Key；输出月相照度/暗夜窗口/流星雨 + 逐日 1-5 星评分；**月照 > 50% 不许默认排深空** |
-| 日出日落 | `nature_forecast.py sun --lat .. --lng .. --date ..` | api.sunrise-sunset.org 免费；精确到分钟，含黄金/蓝调/晨昏蒙影；交付页必须写清机位朝向与占位时间 |
-| 赶海 | `nature_forecast.py tide --lat .. --lng .. --date ..` | Open-Meteo Marine 免费；**推荐窗口 = 干潮前后 1.5 小时**；潮位为 MSL 基准、有效期约 10 天，脚本标 `partial` 时**必须对照官方潮汐表复核，不得直接采信** |
-| 朝晚霞 | `nature_forecast.py glow --lat .. --lng .. --event set\|rise` | 自建 0-3 级评分（并入日出日落卡）；**参考值非官方预报**（sunsetbot.top 已下线），交付时必须如实标注 |
-
-⛔ **时刻敏感数据（日出日落/月相/霞光/潮汐）一律用 `--lat/--lng` 取，不要用 `--city`**：
-中文重名地名极多，`--city 大同` 会解析到黑龙江大同（与山西大同日出差 46 分钟）而脚本不报错；
-坐标按**实际观测点**取（观星点离市区几十公里时尤其重要）。细节见 `references/nature-apis.md` §6.2。
-
-**可点的东西（渲染层，写在 `scripts/nature_widgets.py`）**：攻略页上每一项都不只是文字，各有一个能点能看的交互件，全部纯 CSS 无脚本：
-
-| 专项 | 交互件 | 需要给到的字段 |
-|---|---|---|
-| 观鸟 | 鸟种卡：点开看学名/科属/保护等级/简介，并给图鉴与查图外链 | `species[]` 写成对象（`sci`/`family`/`status[]`/`intro`/`intro_source`/`best_months`/`taxa_url`），写字符串只能降级成小胶囊且必须只写鸟名 |
-| 观星 | 示意星图（真算地平坐标）+ 月亮相位盘 + 「今晚看什么」 | `chart{lat,lng,tz,at,place}`；`targets[]`；`spots` |
-| 日出日落 | 天光条（蓝调/黄金/白天/夜一条横轴）+ 霞光指数点阵 | `sunrise`/`sunset`/`golden_hour`/`blue_hour`；霞光写进 `nature.glow`（`score`/`level`/`reasons`/`inputs`） |
-| 赶海 | 潮汐图点选：点曲线上的圆点，换该时刻潮位与下滩建议 | `curve[{t,h}]`（接口逐时潮位）+ `extremes[{type,time,height_m}]` + `best_window`/`unit`/`source_id` |
-| 动线 | 逐日停靠点连成 SVG 示意图 + 跳高德看全部点位 / 规划整条路线 | 每个停靠点给 `geo{lng,lat}`（**高德坐标系**，别填 WGS-84） |
-
-四条要求：
-- **地点字段**（`hotspots`/`spots`/`best_spot`）写成 `[{name, note}]` 或 `["A","B"]`，渲染时会变成可点的高德搜索链接；写成一句话也能用，但会拿整句话去搜
-- **`species[]` 的纯字符串只写鸟名**（`"大天鹅"`），说明写进 `nature.birding.notes`。渲染层会把长句按首个标点拆成「鸟名 + 说明」，但拆出来的鸟名未必对，别指望它兜底
-- 潮汐图**只画接口真实给到的时段**，没数据的时段不补线；星图必须写明是「按 X 坐标 Y 时刻算的示意星图，未做大气折射与光污染修正」，不要写成精密星历
-- **价格不写死**：要订的门票/住宿/车票在数据里给 `booking{kind,keyword}`，渲染成点评/美团搜索入口，让用户看当天报价。本 skill 不接要 Key 的平台接口，也不编房价
+- ⛔ 时刻敏感数据（日出日落/月相/霞光/潮汐）一律 `--lat/--lng` 取，不要用 `--city`：
+  中文重名地名极多，`--city 大同` 会解析到黑龙江大同而脚本不报错；坐标按**实际观测点**取
+- ⛔ `species[]` 写成对象；**纯字符串只写鸟名**，说明写进 `nature.birding.notes`
 
 ## 交付规范
 
@@ -260,11 +242,17 @@ python scripts/red_team.py check travel-plan/<trip_id>   # 目录或 trip.json �
 - 关键信息标来源 + 日期；未知写"未查到"，不写 0 或"正常开放"
 - 自然观察专项独立成节；MD 与 HTML 同源同 `plan_version`；产物落 `travel-plan/<trip_id>/` 并给出路径
 
+### 交付物
+
+- **默认两份**：Markdown 攻略 + 单文件 HTML 攻略页，交付时把两个路径都给出来。
+- **海报是可选件，但「问不问」不是可选的**：交付前**一定要问一句要不要海报**
+  （AI 一层绘制的手绘地图），这是必问项。用户说不生成就不生成，只是不能不问。
+
 ## 注意事项
 
 - 🔴 **AI 生成内容必须人工核对**：时间/价格/预约/潮汐/月相以官方或数据源为准。潮汐与日出时刻属
   **天文/海洋预报**，接口返回后仍需对照官方来源复核（国家海洋信息中心、天文台）
-- 🔴 个人出行信息只本地交付；eBird Token 只走环境变量，⛔ 不进行程数据/MD/HTML
+- 🔴 个人出行信息只本地交付；任何 API 凭据只走环境变量，⛔ 不进行程数据/MD/HTML
 - 观鸟观星赶海需实时信息时用接口 + web 搜索最新数据，不要凭记忆；出境游额外提醒签证/时差/插头/网络
 - **接口失败不阻塞**（超时/403/空结果/404/SSL）：改用 web 搜索并标注数据源与日期。**连续两个接口都失败
   先跑 `python scripts/doctor.py`** 排掉环境问题，别一个个试错；有专项的方案交付前可跑
@@ -275,21 +263,25 @@ python scripts/red_team.py check travel-plan/<trip_id>   # 目录或 trip.json �
 ## Resources
 
 **`references/`（按需读，别全读）**：`intake-interview.md` 访谈协议＝S1 执行手册 · `data-schema.md` 字段契约＝写分片前必读 ·
-`red-team-checklist.md` 红方六轮清单 · `nature-apis.md` 接口清单与降级规则 · `nature-knowledge.md` 专项知识库 ·
-`writing-style.md` 去 AI 味规范 · `design-system.md` 视觉规范（只在改渲染器/CSS 时读） · `repo-layout.md` 仓库结构与维护说明
+`red-team-checklist.md` 红方六轮清单 · `nature-apis.md` 接口清单与降级规则 · `nature-knowledge.md` 专项知识库 +
+`nature-special.md` **自然专项执行手册（命令/降级/字段表）** ·
+`writing-style.md` 去 AI 味规范 · `design-system.md` 视觉规范（只在改渲染器/CSS 时读） · `repo-layout.md` 仓库结构与维护说明 · `poster-ai-spec.md` **AI 一层绘制海报规范（铁律 / 算法 / 验收口径 / 忌用做法，做 AI 版海报前必读）**
 
-**`scripts/`（`--help` 看用法）**：`build_trip.py` v1.3.0 分片与渲染入口（`skeleton`/`render`/`split`/`validate`/`assemble`/`schema`；
-数据以分片为常态，`render` 只校验一次且报错自带分片定位） · `render_plan.py` 渲染器 v3.8.0（`--check` 一致性） ·
+**`scripts/`（`--help` 看用法）**：`build_trip.py` v1.4.0 分片与渲染入口（`skeleton`/`render`/`split`/`validate`/`assemble`/`schema`；
+数据以分片为常态，`render` 只校验一次且报错自带分片定位） · `render_plan.py` 渲染器 v3.11.0（`--check` 一致性） ·
+`poster_ai.py` AI 一层绘制海报 v1.7.5（行程数据 → 骨架草图 + 生图提示词，全自动通用；
+规范见 `references/poster-ai-spec.md`） ·
+`poster_check.py` 生成图体检（尺寸 / 空白，生图偶发返回空白时打回重生成） ·
 `red_team.py` 红方规则引擎 v1.3.0（23 条，`check`/`rules`，有阻断项退出码 1） ·
-`nature_forecast.py` 专项取数 v2.3.0（`tide`/`sun`/`astro`/`glow`/`bird`/`selftest`，全部免费无 Key） ·
-`nature_widgets.py` 交互件 v1.3.0 · `doctor.py` 环境自检
+`nature_forecast.py` 专项取数 v2.4.0（`tide`/`sun`/`astro`/`glow`/`bird`/`selftest`，全部免费无 Key） ·
+`nature_widgets.py` 交互件 v1.4.0 · `doctor.py` 环境自检
 
 **`assets/handbook.css`**：交付页样式源（渲染时内联进 HTML）。**改样式改它，别把 CSS 塞进 render_plan.py**。
 `examples/` 与 `tests/` 只在源码仓库、不随上架包分发，原因与结构见 `references/repo-layout.md`。
 
 ---
 
-*v4.10.0 | travel-orchestrator 完全自包含版：主流程 S1-S10 全编排 + S6.5 红方复核（对抗式挑刺）+
-自然观察专项按需触发（观鸟 / 观星 / 日出 / 赶海，含火烧云评分）+ 反幻觉溯源 + 去 AI 味交付，不依赖任何其他 skill*
+*v4.15.4 | travel-orchestrator：主流程 S1-S10 全编排 + S6.5 红方复核（对抗式挑刺）+
+自然观察专项按需触发（观鸟 / 观星 / 日出 / 赶海，含火烧云评分）+ 反幻觉溯源 + 去 AI 味交付*
 
 *完整变更历史见 [CHANGELOG.md](CHANGELOG.md)。*
