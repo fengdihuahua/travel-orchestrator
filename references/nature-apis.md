@@ -3,8 +3,8 @@
 > **版本 v2.1.0（2026-09）**
 > v2.0.0：原潮汐接口（cnss.com.cn tideJson）与火烧云接口（sunsetbot.top）**已失效**，
 > 改由 Open-Meteo 系列替代。
-> v2.1.0：**观鸟改为默认免注册**（iNaturalist 主源 + GBIF 备用），eBird 降级为可选增强
-> 并补全完整支持（含 `ebirdcheck` 自检）。同批实测排除 3 个鸟鸣识别方案（见 §4.4）。
+> v2.4.0：**观鸟全程免注册**（iNaturalist 主源 + GBIF 备用）。
+> 同批实测排除 3 个鸟鸣识别方案（见 §4.4）。
 > 旧接口保留在文末「已停用接口」章节备查。
 
 **原则：能用接口不用记忆，接口挂了用 web 搜索降级，所有结果标注数据源与日期。**
@@ -22,7 +22,6 @@
 | 🔥 火烧云（霞光） | Open-Meteo Forecast + Air Quality（自建模型） | ✅ 可用 | 否 | 16 天 |
 | 🐦 观鸟（记录/名录/物候） | iNaturalist | ✅ 可用 | **否** | 近 1 年 + 历史全量 |
 | 🐦 观鸟（备用源） | GBIF | ✅ 可用 | **否** | 近年 |
-| 🐦 观鸟（可选增强） | eBird（康奈尔） | ✅ 可用（需免费 Token） | 是 | 近 30 天 |
 | 📍 城市名解析 | Open-Meteo Geocoding | ✅ 可用 | 否 |：|
 | 🔊 鸟鸣识别 |：| ❌ 无免 Key 方案 |：| 改用手机 App（§4.4） |
 
@@ -30,7 +29,6 @@
 
 ```bash
 python scripts/nature_forecast.py selftest          # 全部数据源
-python scripts/nature_forecast.py ebirdcheck        # 单独验证 eBird Token
 ```
 
 **无需任何注册即可完成的功能**：潮汐、观星、日出日落、火烧云、观鸟记录、
@@ -159,7 +157,6 @@ python scripts/nature_forecast.py ebirdcheck        # 单独验证 eBird Token
 ## 4. 🐦 观鸟：物种、记录与识别
 
 > **设计原则：默认免注册。** 游客装完 skill 就能查鸟，不该先被要求去某个网站注册账号。
-> eBird 能力更全，但作为**可选增强**存在，不是前置条件。
 
 ### 4.1 iNaturalist API（主源，免费**无 Key**，首选）
 
@@ -182,7 +179,6 @@ python scripts/nature_forecast.py ebirdcheck        # 单独验证 eBird Token
      部分物种静默回退成英文名（不报错，很难发现）。脚本已改为按 100 个一批 + 显式 `per_page`。
 - **返回**：观测日期、物种学名/英文名、观察者填写的地点名、坐标（珍稀种已模糊化）、
   记录永久链接（`https://www.inaturalist.org/observations/{id}`）
-- **优势**：免 Key、全球覆盖、含照片与位置、中文名规范；**劣势**：记录密度低于 eBird 在中国的部分热点
 
 ### 4.2 GBIF Occurrence API（备用，免费无 Key）
 
@@ -192,35 +188,6 @@ python scripts/nature_forecast.py ebirdcheck        # 单独验证 eBird Token
 - **定位**：iNaturalist 不可用时的兜底。数据以标本与科研调查记录为主，**时效性明显弱于公民科学平台**，
   用于"这个地区有分布"的佐证可以，用于"最近能看到什么"偏弱
 - **物种名建议**：`GET /species/suggest?q=Grus japonensis&rank=SPECIES`
-
-### 4.3 eBird API（可选增强，需免费 Token）
-
-> 只有用户主动提供 Token 时才启用。不提供时**全部观鸟功能照常可用**。
-
-- **申请**：`https://ebird.org/api/keygen`（免费，非商业约 1000 次/天）
-- **传入**：`--token 你的Token`，或环境变量 `EBIRD_API_TOKEN`
-- **验证**：`python scripts/nature_forecast.py ebirdcheck` ← 一条命令测 Token 与全部实际依赖的端点
-- **请求头**：`X-eBirdApiToken: {token}`（**注意大小写**：`X-eBirdApiToken`）
-- **本脚本实际使用的端点**：
-  | 用途 | 接口 | 参数上限 |
-  |---|---|---|
-  | 近期观测（按坐标） | `GET /data/obs/geo/recent` | `dist` ≤ 50km，`back` ≤ 30 天 |
-  | 珍稀鸟种 | `GET /data/obs/geo/recent/notable` | 同上 |
-  | 观鸟热点 | `GET /ref/hotspot/geo?fmt=json` | `dist` ≤ 50km |
-  | 区域近期观测 | `GET /data/obs/{regionCode}/recent` | `back` ≤ 30 天 |
-- **eBird 独有能力**：**珍稀鸟种提醒**（notable），iNaturalist 没有等价端点；
-  以及官方审核的**热点地点库**（地点名规范，不像自由填写的 `place_guess` 那样一地多名）
-- **Token 带来的差异**：
-  | | 无 Token（默认） | 有 Token |
-  |---|---|---|
-  | 近期观测 | iNaturalist | eBird + iNaturalist 合并 |
-  | 珍稀鸟种提醒 | ✗ | ✓ |
-  | 地点推荐 | 按记录密度排序 | eBird 官方热点库 |
-  | 当季鸟种名录 | ✓ | ✓（仍来自 iNaturalist） |
-- **403 的含义**：eBird 在鉴权层就拦，**连不存在的路径也返回 403**。
-  所以无法用 403/404 判断端点是否有效，**能确认 Token 有效的唯一方法是真的调用一次**
-  （这正是 `ebirdcheck` 的用途）
-- **429**：超出每日配额。免费额度日常够用，批量生成多城市方案时才会碰到
 
 ### 4.4 鸟鸣识别：无免 Key 方案（诚实说明）
 
@@ -255,7 +222,6 @@ python scripts/nature_forecast.py ebirdcheck        # 单独验证 eBird Token
 - **天气约束**（`birdtime` 的判定依据）：风速 ≥ 30km/h 判差（鸟躲藏且难观察）；
   降水概率 ≥ 60% 判差；能见度 < 5km 提示"远处水鸟看不清"
 - **迁徙季**：春秋两季（3-5 月、9-11 月）过境鸟多；6-7 月繁殖季鸣唱密；冬季雁鸭鸥类集群
-- **观察点选择**：优先 eBird 热点（有 Token 时）/ iNaturalist 记录密集点；保护区、湿地、河口滩涂
 - **设备**：双筒望远镜（8×42 通用）、长焦（400mm+）、录音笔；穿素色/迷彩，避开红黄亮色
 - **伦理**：不惊鸟、不诱拍、**不使用鸟鸣回放**、不靠近巢穴、不公开珍稀鸟精确坐标
 
@@ -403,7 +369,6 @@ python scripts/nature_forecast.py sun --lat 40.10 --lng 113.70 --date 2026-09-26
 | `https://xeno-canto.org/api/2/recordings` | 鸟鸣库 | 2026-09 | v2 路径 404；v3 返回 **401 需 Key** | §4.4 改用手机 App |
 | `https://search.macaulaylibrary.org/api/v1/search` | 鸟类媒体库 | 2026-09 | 返回**机器人验证页**（Anubis 反爬） | §4.4 人工访问 |
 | `https://api.birdreport.cn/*` | 中国观鸟记录中心数据 | 2026-09 | 后端存在，端点未公开，逐一探测全 404 | §4.5 站内人工查询 |
-| `https://api.ebird.org/v2/ref/taxa/ebird` | eBird 分类名录 | 2026-09 | 返回 404 | 用 iNaturalist `/taxa` |
 
 > 说明：前两项曾写在本文件旧版本中且未经实测；2026-09-22 实测确认失效后已替换。
 > 后四项是 v2.1.0 为"观鸟免注册"做方案筛选时**逐个实测排除**的，
@@ -441,15 +406,6 @@ python $P species   --city 威海 --month 10             # 当季鸟种名录（
 python $P birdinfo  --name 黑尾鸥 --city 威海           # 物种卡 + 本地逐月物候
 python $P birdtime  --city 威海 --date 2026-10-02      # 观鸟黄金时段（含天气判定）
 python $P birdspot  --city 威海 --radius 60            # 附近观鸟地点
-
-# ---- 观鸟：eBird 可选增强（有免费 Token 时） ----
-python $P ebirdcheck --token YOUR_EBIRD_TOKEN          # 先验证 Token
-python $P bird      --city 威海 --token YOUR_EBIRD_TOKEN        # eBird+iNat 合并 + 珍稀鸟种
-python $P birdspot  --city 威海 --token YOUR_EBIRD_TOKEN        # 改用 eBird 官方热点库
-python $P bird      --source ebird --region CN-37 --token YOUR_EBIRD_TOKEN  # 只用 eBird
-# 也可以把 Token 放进环境变量，省掉 --token
-#   Windows:      set EBIRD_API_TOKEN=xxx
-#   macOS/Linux:  export EBIRD_API_TOKEN=xxx
 ```
 
 ```bash
@@ -464,15 +420,4 @@ curl "https://api.inaturalist.org/v1/observations?taxon_id=3&lat=37.509&lng=122.
 curl "https://api.inaturalist.org/v1/taxa/autocomplete?q=%E9%BB%91%E5%B0%BE%E9%B8%A5"
 curl "https://api.inaturalist.org/v1/taxa?id=4370,6916&locale=zh-CN&per_page=2"
 
-# eBird（需 Token；403 = 鉴权层拦截，不代表路径错误）
-curl -H "X-eBirdApiToken: YOUR_TOKEN" "https://api.ebird.org/v2/data/obs/geo/recent?lat=37.509&lng=122.114&dist=25&back=14"
-```
-
-```bash
-# 直接 curl（调试用）
-curl "https://marine-api.open-meteo.com/v1/marine?latitude=37.509&longitude=122.114&hourly=sea_level_height_msl&forecast_days=10&timezone=Asia%2FShanghai"
-curl "https://www.cyclecalcs.com/v2/today?lat=29.6&lon=106.5"
-curl "https://api.sunrise-sunset.org/json?lat=37.509&lng=122.114&date=2026-09-25&formatted=0"
-curl "https://geocoding-api.open-meteo.com/v1/search?name=%E5%A8%81%E6%B5%B7&count=1&language=zh&format=json"
-curl -H "X-eBirdApiToken: YOUR_TOKEN" "https://api.ebird.org/v2/data/obs/CN-37/recent?back=7"
 ```
