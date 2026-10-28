@@ -1,0 +1,30 @@
+name: CI
+
+# 推 main 或提 PR 时全量验收：编译 → 378 项回归测试 → 红方 → 渲染 → 产物一致性
+# → 示例同步 → 逐宿主打包 → Python/Node 双实现字节级 parity（防漂移命门）
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # parity_check 需要 Node：无 Python 宿主的整条 Node 实现靠它钉死一致性
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: verify_all（八步全量验收）
+        run: python tools/verify_all.py
