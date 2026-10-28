@@ -8,7 +8,7 @@ SKILL.md 只留一句指向这里，是为了不让文件清单占掉每次加�
 ```
 travel-orchestrator/
 ├── SKILL.md              # 主流程 S0-S10（模型每次都会读，尽量瘦；frontmatter 只有 name+description）
-├── adapters/             # 宿主专有 manifest（WorkBuddy workbuddy.json，打包时映射进包根）
+├── adapters/             # 宿主注册表 hosts.json + 各宿主专有 manifest（打包时映射进包）
 ├── README.md CHANGELOG.md  # 给人看的说明与变更史（USAGE.md 已撤出到本地 dev/usage/）
 ├── references/           # 领域文档，模型按需读
 ├── scripts/              # 确定性脚本（分片/渲染/复核/取数）
@@ -20,18 +20,20 @@ travel-orchestrator/
 
 ## 上架包里有什么、没什么
 
-`tools/pack.py` 打出的 zip **只含**：`SKILL.md`（注入 WorkBuddy 平台字段后的版本）、
-`workbuddy.json`（由 `adapters/workbuddy/workbuddy.json` 映射到包根）、`references/`、
-`scripts/`、`assets/`，以及 README/LICENSE 一类根目录文件。
+宿主清单在 `adapters/hosts.json`（注册表 = 单一真源）：每个宿主声明 skill_dir、
+frontmatter 口径（minimal/inject）、manifest 映射、包形态（zip/dir）。
+`tools/pack.py` 按注册表给每个宿主各打一份到 `dist/<宿主>/`；包内容 = `SKILL.md` +
+`references/` + `scripts/` + `assets/` + README/LICENSE 一类根目录文件 +
+该宿主 manifest 映射的文件（如 workbuddy.json → 包内根，openai.yaml → agents/）。
 
 **必须排除**（打包脚本里有对应断言，别改回去）：
 
 | 目录 | 为什么排除 |
 |---|---|
-| `examples/` | 平台只支持「根目录 / 二级目录 / 文件」，即 **skill 目录下最多 1 层子目录**；`examples/weihai-2d/` 下是 2 层，超限会被拒 |
+| `examples/` | WorkBuddy 平台只支持「根目录 / 二级目录 / 文件」，即 **skill 目录下最多 1 层子目录**；`examples/weihai-2d/` 下是 2 层，超限会被拒 |
 | `tests/` | 回归夹具，使用者用不到 |
 | `tools/` | 与安装口径一致（安装后不需要维护者工具） |
-| `adapters/` / `dev/` | 宿主 manifest 经 EXTRA_ROOT_FILES 映射进包（不以子目录进）；dev/ 是纯本地开发文档，不进仓库不进包 |
+| `adapters/` / `dev/` | 宿主 manifest 经注册表映射进包，源码目录不进；dev/ 是纯本地开发文档 |
 | `__pycache__` / `.workbuddy` / `.git` | 中间产物与本地状态 |
 
 需要看示例或跑测试时，从[源码仓库](https://github.com/fengdihuahua/travel-orchestrator)取。
@@ -50,9 +52,9 @@ travel-orchestrator/
 
 | 工具 | 作用 |
 |---|---|
-| `verify_all.py` | 验收流水线：编译 → 测试 → 红方 → 渲染 → 一致性 → 示例同步。`--refresh` 顺带刷新示例产物 |
-| `install.py` | 源码 → 宿主 skill 目录增量同步（`--host workbuddy\|kimi`，默认 workbuddy；workbuddy 装注入版 SKILL.md，kimi 装源码最小集） |
-| `pack.py` | 打包上架 zip（排除规则见上；SKILL.md 打包时注入 WorkBuddy 平台字段） |
+| `verify_all.py` | 验收流水线：编译 → 测试 → 红方 → 渲染 → 一致性 → 示例同步 → 逐宿主打包。`--refresh` 顺带刷新示例产物 |
+| `install.py` | 源码 → 宿主 skill 目录增量同步（宿主清单在 `adapters/hosts.json`，`--host` 动态生成） |
+| `pack.py` | 按注册表逐宿主打包（zip/dir），WorkBuddy zip 带平台自检 |
 | `shot.py` | 截图（`--measure` 量元素、`--offsets` 滚动到指定位置、`--dsf 2` 看清小字） |
 | `probe.py` | 列出元素的盒模型/display，定位错位 |
 | `icon.py` | 生成市场头像（`_shots/icon.png`，纯 PIL） |

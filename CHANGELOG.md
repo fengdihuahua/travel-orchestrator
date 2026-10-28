@@ -1,5 +1,22 @@
 # 更新记录
 
+## v4.18.0（2026-10-15）
+
+**多宿主通用化 M2：宿主注册表驱动的安装与打包。**
+
+- 新增 `adapters/hosts.json` **宿主注册表**（单一真源）：每个宿主声明 skill_dir 模板、
+  frontmatter 口径（minimal/inject）、manifest 映射、包形态（zip/dir）。
+  `install.py` / `pack.py` / `verify_all.py` 全部改为读注册表——**新增宿主只加配置，不改代码**。
+- 首批注册六个宿主：workbuddy（zip + frontmatter 注入）、kimi、claude、cursor、
+  codex（附 `agents/openai.yaml` 可选宿主元数据）、copilot（`.agents/skills/` 跨宿主标准路径，
+  project_relative）。
+- `pack.py` 重写：默认给注册表全部宿主各打一份（`dist/<宿主>/`），`--host` 可单打；
+  `workbuddy_skill_md()` 泛化为 `inject_skill_md(meta, fields)`，注入口径完全由注册表声明。
+- `install.py` 重写：`--host` 选项从注册表动态生成；注入口径跟 `--host` 走（workbuddy 装
+  注入版，其余装开放标准最小集）。
+- `verify_all.py` 新增第 7 步「逐宿主打包」；回归测试新增注册表一致性断言与
+  **逐宿主结构冒烟**（每宿主实际打一份包并校验 SKILL.md / manifest / 最小集口径）。
+
 ## v4.17.0（2026-10-15）
 
 **多宿主通用化 M1：开放标准 frontmatter + S0 环境自检 + 文档撤出。**

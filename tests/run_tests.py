@@ -334,12 +334,12 @@ def test_intake():
 
 # ---------------------------------------------------------------- 用例 7
 def test_publish_meta():
-    """上架元数据（v4.5.1 → v4.17.0 多宿主口径）。
+    """上架元数据（v4.5.1 → v4.17.0 多宿主口径 → v4.18.0 注册表驱动）。
 
     源码 SKILL.md 的 frontmatter 遵循 Agent Skills 开放标准最小集——只有 name +
     description 是跨宿主公认字段，多出来的严格宿主可能拒载。
     WorkBuddy 开放平台额外要求的字段在 adapters/workbuddy/workbuddy.json，
-    由 pack.workbuddy_skill_md() 在打包时注入，源码保持干净。
+    由 pack.inject_skill_md() 按注册表声明的字段清单注入，源码保持干净。
     """
     import re
     print("\n用例 7 · 上架元数据（最小集 frontmatter + WorkBuddy 注入）")
@@ -368,6 +368,19 @@ def test_publish_meta():
     check("description 在 1024 字符内（规范上限）", len(desc) <= 1024, str(len(desc)))
     check("description 不含尖括号（官方校验器会拒）", "<" not in desc and ">" not in desc)
 
+    # 宿主注册表：单一真源，install/pack 共用
+    sys.path.insert(0, os.path.join(ROOT, "tools"))
+    import pack as _pk
+    hosts = _pk.load_hosts()
+    check("注册表至少覆盖 workbuddy/kimi", "workbuddy" in hosts and "kimi" in hosts)
+    check("注册表 workbuddy 是 inject 口径", hosts["workbuddy"].get("frontmatter") == "inject")
+    for name, entry in hosts.items():
+        check("注册表 %s 声明 skill_dir" % name, bool(entry.get("skill_dir")))
+        check("注册表 %s 的 frontmatter 取值合法" % name,
+              entry.get("frontmatter", "minimal") in ("minimal", "inject"))
+        check("注册表 %s 的 package 取值合法" % name,
+              entry.get("package", "dir") in ("dir", "zip"))
+
     # WorkBuddy 元数据：单一真源在 adapters/，打包时注入
     wb_path = os.path.join(ROOT, "adapters", "workbuddy", "workbuddy.json")
     check("workbuddy.json 已迁入 adapters/workbuddy/", os.path.exists(wb_path))
@@ -377,15 +390,14 @@ def test_publish_meta():
     for k in ("display_name", "display_name_en", "category", "version", "author"):
         check("workbuddy.json 有 %s" % k, bool(wb.get(k)), str(wb.get(k, ""))[:28])
 
-    # 注入：zip 里的 SKILL.md 必须带上全部平台字段，正文与源码一致
-    sys.path.insert(0, os.path.join(ROOT, "tools"))
-    import pack as _pk
-    injected = _pk.workbuddy_skill_md().decode("utf-8")
+    # 注入：zip 里的 SKILL.md 必须带上注册表声明的全部字段，正文与源码一致
+    wb_fields = _pk.host_frontmatter_fields(hosts["workbuddy"])
+    injected = _pk.inject_skill_md(wb, wb_fields).decode("utf-8")
     im = re.match(r"^---\n(.*?)\n---", injected, re.DOTALL)
     check("注入后仍有 frontmatter", bool(im))
     if im:
         ifm = im.group(1)
-        for k in tuple(_pk.WORKBUDDY_FM_FIELDS) + ("name", "description"):
+        for k in tuple(wb_fields) + ("name", "description"):
             check("注入后 frontmatter 有 %s" % k,
                   bool(re.search(r"^%s:" % k, ifm, re.M)))
         check("注入后正文与源码一致",
@@ -644,13 +656,66 @@ def test_tools():
     check("打包排除 adapters/（宿主 manifest 经映射进根，不以子目录进包）",
           '"adapters"' in dirs_line)
     check("打包排除 dev/（本地开发文档不进包）", '"dev"' in dirs_line)
+    # 宿主 manifest 映射改由注册表声明（v4.18.0）：单一真源是 adapters/hosts.json
+    hosts = _pack.load_hosts()
+    check("注册表 workbuddy manifest 映射 workbuddy.json 到根",
+          hosts["workbuddy"].get("manifest", {}).get("adapters/workbuddy/workbuddy.json")
+          == "workbuddy.json")
+    check("注册表 codex manifest 映射 openai.yaml 到 agents/",
+          hosts["codex"].get("manifest", {}).get("adapters/codex/openai.yaml")
+          == "agents/openai.yaml")
+    check("install.py 与 pack.py 读同一份注册表",
+          {k: v.get("skill_dir") for k, v in hosts.items()} ==
+          {k: v.get("skill_dir") for k, v in _install.load_hosts().items()})
     check("包内不含任何排除目录",
           not any(seg in _pack.EXCLUDE_DIRS
-                  for _, rel in _pack.collect()
+                  for host, entry in hosts.items()
+                  for _, rel in _pack.collect(_pack.host_manifest(entry))
                   for seg in rel.split(os.sep)))
 
     # ---- ⑦ 打包失败时不能留下半成品 zip（用户可能就拿去上传了）
     check("打包自检失败时清掉半成品 zip", "os.remove(zip_path)" in pk)
+
+    # ---- ⑧ 逐宿主结构冒烟：每个注册的宿主都打得出一个合规包（出到临时目录）
+    out_root = tempfile.mkdtemp(prefix="to-pack-")
+    try:
+        for host, entry in hosts.items():
+            rc = _pack.pack_host(host, entry, out_root)
+            check("宿主 %s 包自检通过" % host, rc == 0)
+            dest = os.path.join(out_root, host)
+            if entry.get("package", "dir") == "zip":
+                import zipfile as _zf
+                zp = os.path.join(dest, "travel-orchestrator.zip")
+                ok_zip = os.path.exists(zp)
+                check("宿主 %s 产出 zip" % host, ok_zip)
+                if ok_zip:
+                    with _zf.ZipFile(zp) as z:
+                        names = z.namelist()
+                    check("宿主 %s 包内有 SKILL.md" % host,
+                          "travel-orchestrator/SKILL.md" in names)
+                    for src, dst in _pack.host_manifest(entry).items():
+                        check("宿主 %s 包内有 %s" % (host, dst),
+                              ("travel-orchestrator/" + dst) in names)
+            else:
+                root_dir = os.path.join(dest, "travel-orchestrator")
+                check("宿主 %s 产出目录形态包" % host, os.path.isdir(root_dir))
+                if os.path.isdir(root_dir):
+                    check("宿主 %s 包内有 SKILL.md" % host,
+                          os.path.exists(os.path.join(root_dir, "SKILL.md")))
+                    for src, dst in _pack.host_manifest(entry).items():
+                        check("宿主 %s 包内有 %s" % (host, dst),
+                              os.path.exists(os.path.join(root_dir, dst)))
+                    # minimal 宿主的 SKILL.md 必须保持开放标准最小集
+                    if entry.get("frontmatter", "minimal") == "minimal":
+                        with open(os.path.join(root_dir, "SKILL.md"),
+                                  encoding="utf-8") as f:
+                            fm_lines = _re.match(r"^---\n(.*?)\n---", f.read(),
+                                                 _re.DOTALL).group(1).splitlines()
+                        keys = [ln.split(":")[0] for ln in fm_lines]
+                        check("宿主 %s 的 SKILL.md 是最小集" % host,
+                              keys == ["name", "description"], ",".join(keys))
+    finally:
+        shutil.rmtree(out_root, ignore_errors=True)
 
 
 def test_smoothness():

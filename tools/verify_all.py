@@ -106,6 +106,11 @@ def main(argv=None):
             else:
                 print("一致（忽略生成时间）：" + "、".join(p.name for p in fresh)
                       + "，共 %d 个" % len(fresh))
+
+        # 7. 逐宿主打包（注册表里每个宿主一份，各宿主结构断言在 tests 用例里）
+        bad += run("7. 逐宿主打包（adapters/hosts.json 注册表全量）",
+                   ["tools/pack.py", "--out", str(tmp / "dist")], tail=24)
+
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

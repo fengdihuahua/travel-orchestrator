@@ -296,8 +296,8 @@ python scripts/red_team.py check travel-plan/<trip_id>   # 目录或 trip.json �
 
 ---
 
-*v4.17.0 | travel-orchestrator：SKILL.md frontmatter 收敛为开放标准最小集
-（name+description 双语），宿主专有字段由 pack.py 打包时从 adapters/workbuddy/workbuddy.json
-注入；新增 S0 环境自检与正式降级模式、海报生图能力探测；USAGE.md 撤入本地 dev/，README 瘦身*
+*v4.18.0 | travel-orchestrator：宿主注册表（adapters/hosts.json）驱动安装与打包——
+新宿主只加注册表配置不改代码；pack.py 每宿主各出一份包（zip/dir），
+install.py --host 覆盖 claude/cursor/codex/copilot；verify_all 增加逐宿主打包校验*
 
 *完整变更历史见 [CHANGELOG.md](CHANGELOG.md)。*

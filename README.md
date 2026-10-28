@@ -20,14 +20,24 @@
 |---|---|
 | WorkBuddy | `%USERPROFILE%\.workbuddy\skills\travel-orchestrator` |
 | Kimi Work | `%APPDATA%\kimi-desktop\daimon-share\daimon\skills\travel-orchestrator` |
-| 其他标准宿主 | 手动把整个目录复制到它们的 `skills/` 目录 |
+| Claude Code | `~/.claude/skills/travel-orchestrator` |
+| Cursor | `~/.cursor/skills/travel-orchestrator`（或三方共读的 `.agents/skills/`） |
+| Codex CLI | `~/.codex/skills/travel-orchestrator` |
+| Copilot / VS Code | `.agents/skills/travel-orchestrator`（或 `.github/skills/`） |
+| 其他 | 各自的 `skills/` 目录；也可 `npx skills add fengdihuahua/travel-orchestrator` |
 
-源码仓库用自带脚本同步（`--dest` 可装到任意位置）：
+源码仓库用自带脚本同步（宿主清单在 `adapters/hosts.json` 注册表，`--dest` 可装到任意位置）：
 
 ```bash
-python tools/install.py                  # WorkBuddy（默认，SKILL.md 注入平台字段版）
-python tools/install.py --host kimi      # Kimi Work（开放标准最小集版）
+python tools/install.py                  # WorkBuddy（默认）
+python tools/install.py --host kimi      # Kimi Work
+python tools/install.py --host claude    # Claude Code
+python tools/install.py --host cursor    # Cursor
+python tools/install.py --host codex     # OpenAI Codex CLI
+python tools/install.py --host copilot   # .agents/skills/（当前项目根下）
 ```
+
+新增宿主只改 `adapters/hosts.json`，不用动安装脚本。
 
 装完重启会话生效。**不需要装任何 Python 包**，标准库够用。
 
@@ -49,7 +59,7 @@ python tools/install.py --host kimi      # Kimi Work（开放标准最小集版�
 ```
 travel-orchestrator/
 ├── SKILL.md            # 主流程 S0-S10 + S6.5 红方复核（frontmatter 仅 name + description）
-├── adapters/           # 宿主专有 manifest（WorkBuddy workbuddy.json，打包时映射进包根）
+├── adapters/           # 宿主专有 manifest（WorkBuddy 等，打包时映射进包，不进其他宿主）
 ├── references/         # 领域文档（数据契约 / 访谈协议 / 红方清单 / 接口清单…），模型按需读
 ├── scripts/            # 确定性脚本（取数 / 分片 / 校验 / 渲染 / 复核），纯标准库
 ├── assets/handbook.css # 交付页样式源
