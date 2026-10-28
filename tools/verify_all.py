@@ -111,6 +111,10 @@ def main(argv=None):
         bad += run("7. 逐宿主打包（adapters/hosts.json 注册表全量）",
                    ["tools/pack.py", "--out", str(tmp / "dist")], tail=24)
 
+        # 8. Python / Node 双实现一致性（防漂移命门，详见 tools/parity_check.py
+        #    头部口径说明；缺 node 时 parity 自己报 2，这里同样计为失败）
+        bad += run("8. 双实现 parity（red_team / validate / 渲染 / 自然专项）",
+                   ["tools/parity_check.py"], tail=8)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

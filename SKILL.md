@@ -296,8 +296,8 @@ python scripts/red_team.py check travel-plan/<trip_id>   # 目录或 trip.json �
 
 ---
 
-*v4.18.0 | travel-orchestrator：宿主注册表（adapters/hosts.json）驱动安装与打包——
-新宿主只加注册表配置不改代码；pack.py 每宿主各出一份包（zip/dir），
-install.py --host 覆盖 claude/cursor/codex/copilot；verify_all 增加逐宿主打包校验*
+*v4.19.0 | travel-orchestrator：Python/Node 双实现（js/red_team·build_trip·render_plan·
+nature_forecast·nature_widgets）+ tools/parity_check.py 字节级防漂移（67 项）——
+无 Python 宿主的确定性管线有了正式实现；verify_all 第 8 步跑 parity*
 
 *完整变更历史见 [CHANGELOG.md](CHANGELOG.md)。*

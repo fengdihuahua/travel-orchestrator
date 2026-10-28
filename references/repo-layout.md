@@ -11,7 +11,9 @@ travel-orchestrator/
 ├── adapters/             # 宿主注册表 hosts.json + 各宿主专有 manifest（打包时映射进包）
 ├── README.md CHANGELOG.md  # 给人看的说明与变更史（USAGE.md 已撤出到本地 dev/usage/）
 ├── references/           # 领域文档，模型按需读
-├── scripts/              # 确定性脚本（分片/渲染/复核/取数）
+├── scripts/              # 确定性脚本（分片/渲染/复核/取数），Python 实现
+├── js/                   # 同一管线的 Node 双实现（无 Python 宿主用；与 Python 版由
+│                         #   tools/parity_check.py 钉成字节级一致，改一边必须改另一边）
 ├── assets/handbook.css   # 交付页样式源
 ├── tools/                # 维护者工具，不进上架包
 ├── examples/ tests/      # 示例与回归测试，不进上架包
@@ -52,9 +54,10 @@ frontmatter 口径（minimal/inject）、manifest 映射、包形态（zip/dir�
 
 | 工具 | 作用 |
 |---|---|
-| `verify_all.py` | 验收流水线：编译 → 测试 → 红方 → 渲染 → 一致性 → 示例同步 → 逐宿主打包。`--refresh` 顺带刷新示例产物 |
+| `verify_all.py` | 验收流水线：编译 → 测试 → 红方 → 渲染 → 一致性 → 示例同步 → 逐宿主打包 → 双实现 parity。`--refresh` 顺带刷新示例产物 |
 | `install.py` | 源码 → 宿主 skill 目录增量同步（宿主清单在 `adapters/hosts.json`，`--host` 动态生成） |
 | `pack.py` | 按注册表逐宿主打包（zip/dir），WorkBuddy zip 带平台自检 |
+| `parity_check.py` | Python / Node 双实现防漂移命门：同 fixtures 两套实现跑，退出码/stdout/产物逐字节比（口径见文件头；`TO_PARITY_LIVE=1` 追加联网冒烟）。**改了 `js/` 或 `scripts/` 里被覆盖的任何一个，都必须跑它** |
 | `shot.py` | 截图（`--measure` 量元素、`--offsets` 滚动到指定位置、`--dsf 2` 看清小字） |
 | `probe.py` | 列出元素的盒模型/display，定位错位 |
 | `icon.py` | 生成市场头像（`_shots/icon.png`，纯 PIL） |

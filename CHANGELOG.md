@@ -1,5 +1,28 @@
 # 更新记录
 
+## v4.19.0（2026-10-15）
+
+**多宿主通用化 M3：Python / Node 双实现 + 字节级 parity。**
+
+无 Python 的宿主（Claude Code、Cursor、Codex 等）此前只能走 SKILL.md 的人工降级模式；
+本版把确定性管线完整移植为 Node 实现，双实现由同一套 parity 测试钉死：
+
+- 新增 `js/`：`red_team.mjs`（规则引擎）、`build_trip.mjs`（merge/validate/render）、
+  `render_plan.mjs`（MD/HTML 渲染器）、`nature_forecast.mjs`（tide/sun/astro/glow 取数）、
+  `nature_widgets.mjs`（SVG 小组件）、`pyfmt.mjs`（Python 语义对齐层：银行家舍入、
+  `%` 格式化、repr、JSON 的 int/float 区分）、`pydata.mjs`（静态数据表，由 Python 导出）。
+- **渲染产物逐字节一致**：同一方案目录，两套实现出的 MD/HTML 归一化时间戳后
+  逐字节相等（示例方案已验证）。
+- `tools/parity_check.py` 全量 parity：rules/check/validate/split 分片字节级、
+  渲染产物字节级、渲染结构门（exit 3 + stderr）、自然专项离线确定性路径
+  （CLI 错误路径 + 纯函数 + JSON 浮点语义）——**67 项全过**；
+  联网取数是活数据，仅 `TO_PARITY_LIVE=1` 时做结构级冒烟，不承诺字节级。
+- `verify_all.py` 新增第 8 步跑 parity；无 node 环境 parity 报 2 并计为失败。
+- 观鸟类子命令（bird/species/birdinfo/birdtime/birdspot）与 poster_ai 不移植，
+  属已声明的非目标：Node 实现遇到会诚实提示并退出，Python 宿主不受影响。
+- 已知限制：JSON int/float 在 JS 侧靠 PyFloat 标记对齐；超出 2^53 的整数字面量
+  原样保留文本不参与算术。
+
 ## v4.18.0（2026-10-15）
 
 **多宿主通用化 M2：宿主注册表驱动的安装与打包。**
