@@ -72,7 +72,15 @@ def rules_of(path):
 # ---------------------------------------------------------------- 用例 1
 def test_clean_plan():
     print("\n用例 1 · 干净方案应当通过红方")
-    r = red_team.run(load(GOOD))
+    plan = load(GOOD)
+    # RT-F04 以"运行当天"为锚判断取数是否超 30 天；示例是已完成的真实案例快照，
+    # 取数日会随时间自然过期。这里只对实时类来源把取数日对齐到运行当天，
+    # 专测规则正确性，不让快照的"年龄"误伤（快照文件本身保持原样）。
+    from datetime import date
+    for s in plan.get("sources", []):
+        if (s.get("kind") or "").lower() in red_team.REALTIME_KINDS and s.get("retrieved_at"):
+            s["retrieved_at"] = date.today().isoformat()
+    r = red_team.run(plan)
     check("无阻断项", r["summary"]["blocking"] == 0, f"blocking={r['summary']['blocking']}")
     check("无严重项", r["summary"]["major"] == 0, f"major={r['summary']['major']}")
     check("结论为通过", r["verdict"] == "通过", r["verdict"])

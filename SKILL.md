@@ -296,6 +296,7 @@ python scripts/red_team.py check travel-plan/<trip_id>   # 目录或 trip.json �
 
 ---
 
+*v4.19.1 | 测试维护：示例快照的取数日期对齐运行当天，修复 RT-F04 时间锚误伤历史案例
 *v4.19.0 | travel-orchestrator：Python/Node 双实现（js/red_team·build_trip·render_plan·
 nature_forecast·nature_widgets）+ tools/parity_check.py 字节级防漂移（67 项）——
 无 Python 宿主的确定性管线有了正式实现；verify_all 第 8 步跑 parity*
