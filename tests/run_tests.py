@@ -411,17 +411,14 @@ def test_publish_meta():
         check("注入后正文与源码一致",
               injected.rsplit("---", 1)[1] == skill.rsplit("---", 1)[1])
 
-    # 版本号三处同口径：页脚、adapters/workbuddy/workbuddy.json、CHANGELOG 顶部
+    # 版本号两处同口径：页脚、adapters/workbuddy/workbuddy.json
+    # （v4.20.0 起变更史撤出仓库归 git log，CHANGELOG 口径作废）
     foot = re.search(r"^\*v(\d+\.\d+\.\d+) \|", skill, re.M)
     check("页脚有版本号", bool(foot), foot.group(1) if foot else "-")
     if foot:
         check("页脚与 workbuddy.json 版本一致",
               foot.group(1) == wb.get("version"),
               "%s / %s" % (foot.group(1), wb.get("version")))
-        with open(os.path.join(ROOT, "CHANGELOG.md"), encoding="utf-8") as f:
-            head = f.read(400)
-        check("CHANGELOG 顶部与页脚版本一致",
-              ("## v" + foot.group(1)) in head)
 
     author = wb.get("author", "")
     with open(os.path.join(ROOT, "LICENSE"), encoding="utf-8") as f:
@@ -664,6 +661,8 @@ def test_tools():
     check("打包排除 adapters/（宿主 manifest 经映射进根，不以子目录进包）",
           '"adapters"' in dirs_line)
     check("打包排除 dev/（本地开发文档不进包）", '"dev"' in dirs_line)
+    check("打包排除 CHANGELOG.md（变更史归 git log，不进包）",
+          '"CHANGELOG.md"' in pk)
     # 宿主 manifest 映射改由注册表声明（v4.18.0）：单一真源是 adapters/hosts.json
     hosts = _pack.load_hosts()
     check("注册表 workbuddy manifest 映射 workbuddy.json 到根",
@@ -801,36 +800,38 @@ def test_smoothness():
           skill.count("references/data-schema.md") >= 2)
     check("死指针「交付格式」一节已修掉", "「交付格式」" not in skill)
 
-    # ---- ④ SKILL.md 不再内嵌变更史（历史归 CHANGELOG）
+    # ---- ④ SKILL.md 不再内嵌变更史（v4.20.0 起变更史整体撤出，归 git log）
     check("SKILL.md 不再内嵌旧版本变更史",
           "v4.0.0 新增" not in skill and "v3.3.0 接口修复" not in skill)
-    check("SKILL.md 指向 CHANGELOG", "CHANGELOG.md" in skill)
+    check("SKILL.md 不指向已撤出的 CHANGELOG",
+          "CHANGELOG.md" not in skill)
     # v4.9.0 把文件清单/仓库说明/四档状态/同类对比/S1 协议细节/专项操作手册外迁到 references，
     # 主文件从 419 行降到 295，这里钉住别再长回去
     check("SKILL.md 瘦身到位（< 310 行）",
           len(skill.splitlines()) < 310, "%d 行" % len(skill.splitlines()))
     check("SKILL.md 不再内嵌变更史正文",
           "顺滑度与实用度" not in skill)
-    check("文件清单外迁后仍指得回仓库说明", "references/repo-layout.md" in skill)
+    check("SKILL.md 不指向已撤出的 repo-layout（维护口径归 pack.py 注释）",
+          "repo-layout" not in skill)
     check("四档状态表已外迁（主文件只留指针）",
           "| `verified` |" not in skill and "references/data-schema.md" in skill)
     with io.open(os.path.join(ROOT, "references", "data-schema.md"), encoding="utf-8") as f:
         schema6 = f.read()
     check("数据结构文档补上了四档状态契约",
           "| `verified` |" in schema6 and "unknown" in schema6 and "30 天" in schema6)
-    with io.open(os.path.join(ROOT, "references", "repo-layout.md"), encoding="utf-8") as f:
-        layout = f.read()
-    # 口径只有一种说法：「skill 目录下最多 1 层子目录」。早先文档里同时出现过
-    # 「三层」「四层」指同一条路径，读者对不上平台规则，所以断言按统一后的口径写。
-    check("仓库说明写清 examples/ 为何不进包",
-          "最多 1 层子目录" in layout and "examples/" in layout)
-    check("仓库说明列了打包排除项", "pack.py" in layout and "examples/" in layout)
+    with io.open(os.path.join(ROOT, "tools", "pack.py"), encoding="utf-8") as f:
+        pk_src = f.read()
+    # v4.20.0 撤掉 repo-layout.md：examples/ 层级限制等打包口径由 pack.py 头部注释持有，
+    # 这里钉住注释不能丢（唯一说法的防线从文档挪到了注释）
+    check("打包口径写在 pack.py 注释（examples 层级限制，原 repo-layout 内容）",
+          "根目录 / 二级目录 / 文件" in pk_src and '"examples"' in pk_src)
 
     # ---- ⑤ 红方轮次封顶、交付门不再与共识重复
     check("红方轮次封顶（不再无上界重做）",
           "最多 2 轮" in skill and "该重做方案" not in skill)
     check("S8 不再重复确认共识已定的事",
-          "别再确认一遍" in skill or "只有共识确认后需求又变过" in skill)
+          "别再确认一遍" in skill or "只有共识确认后需求又变过" in skill
+          or "不重复确认" in skill)
 
 
 def test_routemap():

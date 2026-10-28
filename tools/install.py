@@ -76,12 +76,23 @@ def walk_sources(manifest):
 
 
 def walk_dest(dest):
+    """stale 清理用的目标目录遍历。
+
+    不能用 EXCLUDE_DIRS：那份清单会把早年装进宿主目录、后来才进排除清单的目录
+    （如 dev/）整个跳过，导致装过就永远清不掉。这里只跳过 LOCAL_STATE_DIRS——
+    打包排除但装着本地状态/用户数据的目录，清理时绝不许碰；其余一律以
+    src_rels 为准镜像（安装目录的用途就是与上架包一致）。
+    """
     for root, dirs, files in os.walk(dest):
-        dirs[:] = sorted(d for d in dirs if d not in EXCLUDE_DIRS)
+        dirs[:] = sorted(d for d in dirs if d not in LOCAL_STATE_DIRS)
         for f in sorted(files):
             full = os.path.join(root, f)
             # 统一用 / 分隔：注册表 manifest 的映射目标也是 /，os.sep 在 Windows 下会判成"不一致"
             yield full, os.path.relpath(full, dest).replace(os.sep, "/")
+
+
+# 安装目录里可能存在的本地状态/用户数据：不进包，同步清理时也不许删
+LOCAL_STATE_DIRS = {".git", ".workbuddy", "travel-plan"}
 
 
 def prune_empty(dest, rel):

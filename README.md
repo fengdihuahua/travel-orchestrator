@@ -66,8 +66,7 @@ travel-orchestrator/
 └── tools/ examples/ tests/   # 维护者工具、示例、回归测试：仅仓库，不进上架包
 ```
 
-维护与上架细节（打包、逐宿主校验、发布流程）见 `references/repo-layout.md` 与 `tools/`；
-开发过程文档在本地 `dev/`（不进仓库）。
+维护与上架细节见 `tools/`（打包排除清单在 `tools/pack.py` 头部注释，是唯一真源）。
 
 ## 已知限制
 

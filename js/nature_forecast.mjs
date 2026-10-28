@@ -3,7 +3,7 @@
 /**
  * nature_forecast.mjs — nature_forecast.py 的 Node 双实现（M3c）
  *
- * 移植范围（与 dev/PLAN.md 一致）：tide / sun / astro / glow 四个子命令。
+ * 移植范围：tide / sun / astro / glow 四个子命令。
  * 观鸟类（bird/species/birdinfo/birdtime/birdspot）与 selftest 不移植——
  * 遇到时给出诚实提示并以 2 退出（Python 侧能跑，属已声明的非目标）。
  *

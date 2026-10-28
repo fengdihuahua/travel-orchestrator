@@ -74,14 +74,15 @@ SIZE_LIMIT = 3 * 1024 * 1024
 #   ③ 截图与配图产物：_shots/ generated-images/（几 MB 的 PNG，一旦漏排就顶穿 3 MB 上限）
 #   ④ 临时目录：_tmp/
 #   ⑤ 宿主适配与开发文档：adapters/ dev/（adapters/ 的内容按注册表 "manifest" 映射进包，
-#      dev/ 只进本地不进包——详见仓库根 dev/PLAN.md）
+#      dev/ 是纯本地开发文档，不进包）
 # travel-plan/ 是跑出来的行程数据（含个人出行信息），.gitignore 里也排除了它；
 # 它还是三层结构（travel-plan/<trip>/parts/*.json），漏排会直接违反平台层级限制。
 EXCLUDE_DIRS = {"__pycache__", ".git", ".workbuddy", "_tmp", "_shots",
                 "generated-images", "tools", "tests", "examples", "travel-plan",
                 "adapters", "dev"}
-# SUBMISSION.md 是本地内部材料（活动文案、待办笔记），不是技能内容，不进包
-EXCLUDE_FILES = {".gitignore", ".gitattributes", ".DS_Store", "SUBMISSION.md"}
+# SUBMISSION.md 是本地内部材料（活动文案、待办笔记），CHANGELOG.md 给人看的变更史，
+# 都不是技能运行时内容，不进包
+EXCLUDE_FILES = {".gitignore", ".gitattributes", ".DS_Store", "SUBMISSION.md", "CHANGELOG.md"}
 EXCLUDE_SUFFIX = (".pyc", ".pyo", ".bak", ".tmp", ".out")
 
 # 平台结构约束（WorkBuddy 开放平台原文）：只支持「根目录 / 二级目录 / 文件」。
