@@ -75,9 +75,10 @@ SIZE_LIMIT = 3 * 1024 * 1024
 #   ④ 临时目录：_tmp/
 #   ⑤ 宿主适配与开发文档：adapters/ dev/（adapters/ 的内容按注册表 "manifest" 映射进包，
 #      dev/ 是纯本地开发文档，不进包）
+#   ⑥ CI 配置：.github/（workflows 是三级结构，直接违反上面的 MAX_DEPTH=1）
 # travel-plan/ 是跑出来的行程数据（含个人出行信息），.gitignore 里也排除了它；
 # 它还是三层结构（travel-plan/<trip>/parts/*.json），漏排会直接违反平台层级限制。
-EXCLUDE_DIRS = {"__pycache__", ".git", ".workbuddy", "_tmp", "_shots",
+EXCLUDE_DIRS = {"__pycache__", ".git", ".github", ".workbuddy", "_tmp", "_shots",
                 "generated-images", "tools", "tests", "examples", "travel-plan",
                 "adapters", "dev"}
 # SUBMISSION.md 是本地内部材料（活动文案、待办笔记），CHANGELOG.md 给人看的变更史，
