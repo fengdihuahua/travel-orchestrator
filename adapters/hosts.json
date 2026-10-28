@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "comment": "宿主注册表（单一真源）：install.py / pack.py / verify_all.py 都从这里读。新增宿主只加这里，不改代码。skill_dir 支持 ~ 与 %ENV% 展开；project_relative 表示相对当前项目根目录。",
+  "hosts": {
+    "workbuddy": {
+      "label": "WorkBuddy",
+      "skill_dir": "~/.workbuddy/skills/travel-orchestrator",
+      "frontmatter": "inject",
+      "frontmatter_fields": ["display_name", "display_name_en", "category", "description_zh", "description_en", "version", "author"],
+      "manifest": {"adapters/workbuddy/workbuddy.json": "workbuddy.json"},
+      "package": "zip",
+      "notes": "开放平台强制扩展 frontmatter 字段，打包/安装时从 manifest 注入；zip 需满足体积与层级约束"
+    },
+    "kimi": {
+      "label": "Kimi Work",
+      "skill_dir": "%APPDATA%/kimi-desktop/daimon-share/daimon/skills/travel-orchestrator",
+      "frontmatter": "minimal",
+      "manifest": {},
+      "package": "dir",
+      "notes": "读 SKILL.md frontmatter 即注册；桌面版托管 skill 目录，装完重启会话生效"
+    },
+    "claude": {
+      "label": "Claude Code",
+      "skill_dir": "~/.claude/skills/travel-orchestrator",
+      "frontmatter": "minimal",
+      "manifest": {},
+      "package": "dir",
+      "notes": "Agent Skills 开放标准发源地；也支持项目级 .claude/skills/；目录名必须等于 name"
+    },
+    "cursor": {
+      "label": "Cursor",
+      "skill_dir": "~/.cursor/skills/travel-orchestrator",
+      "frontmatter": "minimal",
+      "manifest": {},
+      "package": "dir",
+      "notes": "原生认 ~/.cursor/skills/，也认跨宿主标准路径 .agents/skills/"
+    },
+    "codex": {
+      "label": "OpenAI Codex CLI",
+      "skill_dir": "~/.codex/skills/travel-orchestrator",
+      "frontmatter": "minimal",
+      "manifest": {"adapters/codex/openai.yaml": "agents/openai.yaml"},
+      "package": "dir",
+      "notes": "agents/openai.yaml 为可选宿主 UI 元数据，其他宿主忽略"
+    },
+    "copilot": {
+      "label": "GitHub Copilot / VS Code",
+      "skill_dir": ".agents/skills/travel-orchestrator",
+      "project_relative": true,
+      "frontmatter": "minimal",
+      "manifest": {},
+      "package": "dir",
+      "notes": "跨宿主标准路径 .agents/skills/（Codex/Cursor/Copilot 三方共读），相对当前项目根；也认 .github/skills/ 与 .claude/skills/"
+    }
+  }
+}

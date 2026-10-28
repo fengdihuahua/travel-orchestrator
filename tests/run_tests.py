@@ -334,14 +334,15 @@ def test_intake():
 
 # ---------------------------------------------------------------- 用例 7
 def test_publish_meta():
-    """上架元数据（v4.5.1）。
+    """上架元数据（v4.5.1 → v4.17.0 多宿主口径）。
 
-    开放平台要求 frontmatter 填 description / description_zh / description_en /
-    version / author，缺一项上传的 zip 就解析失败。这几条是防漂移断言：
-    SKILL.md、workbuddy.json、LICENSE、页脚版本号四处必须同口径。
+    源码 SKILL.md 的 frontmatter 遵循 Agent Skills 开放标准最小集——只有 name +
+    description 是跨宿主公认字段，多出来的严格宿主可能拒载。
+    WorkBuddy 开放平台额外要求的字段在 adapters/workbuddy/workbuddy.json，
+    由 pack.workbuddy_skill_md() 在打包时注入，源码保持干净。
     """
     import re
-    print("\n用例 7 · 上架元数据（frontmatter 必填项与署名同步）")
+    print("\n用例 7 · 上架元数据（最小集 frontmatter + WorkBuddy 注入）")
     with open(os.path.join(ROOT, "SKILL.md"), encoding="utf-8") as f:
         skill = f.read()
     m = re.match(r"^---\n(.*?)\n---", skill, re.DOTALL)
@@ -354,32 +355,59 @@ def test_publish_meta():
         hit = re.search(r'^%s:\s*"?(.*?)"?\s*$' % key, fm, re.M)
         return hit.group(1) if hit else ""
 
-    for key in ("name", "description", "description_zh", "description_en",
-                "version", "author", "category"):
+    for key in ("name", "description"):
         check("frontmatter 有 %s" % key, bool(field(key)), field(key)[:28])
 
-    # 官方 Frontmatter 字段表把 category 标为必填，缺了上传解析会失败
-    check("category 填了分类值", bool(field("category").strip()))
+    # 开放标准最小集：除 name / description 外不应有其他顶层字段
+    others = [ln.split(":")[0].strip() for ln in fm.splitlines()
+              if ln.strip() and not ln.startswith(("name:", "description:"))]
+    check("frontmatter 只有 name + description（开放标准最小集）",
+          not others, ",".join(others))
 
-    author = field("author")
-    check("author 署项目名", author == "travel-orchestrator", author)
     desc = field("description")
+    check("description 在 1024 字符内（规范上限）", len(desc) <= 1024, str(len(desc)))
     check("description 不含尖括号（官方校验器会拒）", "<" not in desc and ">" not in desc)
 
-    with open(os.path.join(ROOT, "workbuddy.json"), encoding="utf-8") as f:
+    # WorkBuddy 元数据：单一真源在 adapters/，打包时注入
+    wb_path = os.path.join(ROOT, "adapters", "workbuddy", "workbuddy.json")
+    check("workbuddy.json 已迁入 adapters/workbuddy/", os.path.exists(wb_path))
+    check("仓库根不再留 workbuddy.json", not os.path.exists(os.path.join(ROOT, "workbuddy.json")))
+    with open(wb_path, encoding="utf-8") as f:
         wb = __import__("json").load(f)
-    check("中文简介两处同步", wb.get("description_zh") == field("description_zh"))
-    check("英文简介两处同步", wb.get("description_en") == field("description_en"))
-    check("展示名两处同步", wb.get("display_name") == field("display_name"))
+    for k in ("display_name", "display_name_en", "category", "version", "author"):
+        check("workbuddy.json 有 %s" % k, bool(wb.get(k)), str(wb.get(k, ""))[:28])
 
+    # 注入：zip 里的 SKILL.md 必须带上全部平台字段，正文与源码一致
+    sys.path.insert(0, os.path.join(ROOT, "tools"))
+    import pack as _pk
+    injected = _pk.workbuddy_skill_md().decode("utf-8")
+    im = re.match(r"^---\n(.*?)\n---", injected, re.DOTALL)
+    check("注入后仍有 frontmatter", bool(im))
+    if im:
+        ifm = im.group(1)
+        for k in tuple(_pk.WORKBUDDY_FM_FIELDS) + ("name", "description"):
+            check("注入后 frontmatter 有 %s" % k,
+                  bool(re.search(r"^%s:" % k, ifm, re.M)))
+        check("注入后正文与源码一致",
+              injected.rsplit("---", 1)[1] == skill.rsplit("---", 1)[1])
+
+    # 版本号三处同口径：页脚、adapters/workbuddy/workbuddy.json、CHANGELOG 顶部
     foot = re.search(r"^\*v(\d+\.\d+\.\d+) \|", skill, re.M)
-    check("页脚版本号与 frontmatter 一致",
-          bool(foot) and foot.group(1) == field("version"),
-          "%s / %s" % (field("version"), foot.group(1) if foot else "-"))
+    check("页脚有版本号", bool(foot), foot.group(1) if foot else "-")
+    if foot:
+        check("页脚与 workbuddy.json 版本一致",
+              foot.group(1) == wb.get("version"),
+              "%s / %s" % (foot.group(1), wb.get("version")))
+        with open(os.path.join(ROOT, "CHANGELOG.md"), encoding="utf-8") as f:
+            head = f.read(400)
+        check("CHANGELOG 顶部与页脚版本一致",
+              ("## v" + foot.group(1)) in head)
 
+    author = wb.get("author", "")
     with open(os.path.join(ROOT, "LICENSE"), encoding="utf-8") as f:
         lic = f.read()
-    check("LICENSE 著作权人与 author 同口径", "Copyright (c) 2026 " + author in lic)
+    check("LICENSE 著作权人与 workbuddy.json author 同口径",
+          "Copyright (c) 2026 " + author in lic)
 
 
 # ---------------------------------------------------------------- 用例 8
@@ -613,10 +641,13 @@ def test_tools():
     import install as _install
     check("两处排除清单确实是同一个对象",
           _pack.EXCLUDE_DIRS is _install.EXCLUDE_DIRS)
+    check("打包排除 adapters/（宿主 manifest 经映射进根，不以子目录进包）",
+          '"adapters"' in dirs_line)
+    check("打包排除 dev/（本地开发文档不进包）", '"dev"' in dirs_line)
     check("包内不含任何排除目录",
           not any(seg in _pack.EXCLUDE_DIRS
-                  for f in _pack.collect()
-                  for seg in os.path.relpath(f, ROOT).split(os.sep)))
+                  for _, rel in _pack.collect()
+                  for seg in rel.split(os.sep)))
 
     # ---- ⑦ 打包失败时不能留下半成品 zip（用户可能就拿去上传了）
     check("打包自检失败时清掉半成品 zip", "os.remove(zip_path)" in pk)

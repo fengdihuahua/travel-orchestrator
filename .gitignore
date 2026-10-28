@@ -22,3 +22,6 @@ travel-plan/
 .env
 
 # （generated-images/ 已于 v4.14.0 整体删除；tools/pack.py 里仍保留排除项当防线）
+
+# 开发过程文档（方案/宿主矩阵/笔记/人读 usage），不进仓库不进包
+dev/

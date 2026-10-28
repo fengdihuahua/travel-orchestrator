@@ -8,8 +8,11 @@ install.py · 把本项目安装（或更新）到某个宿主的 skill 目录
 
 支持的宿主（--host）：
 - workbuddy：%USERPROFILE%\\.workbuddy\\skills\\travel-orchestrator
+  （装的是**注入版** SKILL.md：frontmatter 带开放平台要求的 display_name/
+   category/version 等字段，与上架 zip 同口径）
 - kimi：     %APPDATA%\\kimi-desktop\\daimon-share\\daimon\\skills\\travel-orchestrator
-  （Kimi Work 的托管 skill 目录；装完在新会话的技能索引里出现）
+  （Kimi Work 的托管 skill 目录；装完在新会话的技能索引里出现；
+   装的是源码版 SKILL.md，开放标准最小集 frontmatter）
 
 为什么是"增量同步"而不是"删掉重装"
 ------------------------------------
@@ -22,7 +25,7 @@ install.py · 把本项目安装（或更新）到某个宿主的 skill 目录
 用法：
     python tools/install.py                      # 装到 workbuddy 默认位置
     python tools/install.py --host kimi          # 装到 kimi 的 skill 目录
-    python tools/install.py --dest <目录>         # 装到指定位置（--host 无关）
+    python tools/install.py --dest <目录>         # 装到指定位置（注入口径仍跟 --host 走）
     python tools/install.py --dry-run             # 只看会做什么，不动文件
 """
 from __future__ import annotations
@@ -42,7 +45,8 @@ SKILL_NAME = "travel-orchestrator"
 # 迟早会漂——上一版 pack 排除了 tools/ 而这里没排，装完目录里就多出 5 个开发脚本，
 # 而没人会去比对两个文件。想改口径就改 pack.py，这里跟着走。
 sys.path.insert(0, HERE)
-from pack import EXCLUDE_DIRS, EXCLUDE_FILES, EXCLUDE_SUFFIX  # noqa: E402
+from pack import EXCLUDE_DIRS, EXCLUDE_FILES, EXTRA_ROOT_FILES, EXCLUDE_SUFFIX  # noqa: E402
+from pack import workbuddy_skill_md  # noqa: E402
 
 
 def default_dest(host):
@@ -55,6 +59,7 @@ def default_dest(host):
 
 
 def walk_sources():
+    """[(源文件绝对路径, 安装目录相对路径)]。与 pack.collect() 同一口径。"""
     for root, dirs, files in os.walk(ROOT):
         dirs[:] = sorted(d for d in dirs if d not in EXCLUDE_DIRS)
         for f in sorted(files):
@@ -62,6 +67,10 @@ def walk_sources():
                 continue
             full = os.path.join(root, f)
             yield full, os.path.relpath(full, ROOT)
+    for src, dst in EXTRA_ROOT_FILES.items():
+        full = os.path.join(ROOT, src)
+        if os.path.exists(full):
+            yield full, dst
 
 
 def walk_dest(dest):
@@ -87,8 +96,8 @@ def main(argv=None):
 
     ap = argparse.ArgumentParser(description="安装 travel-orchestrator 到 skill 目录")
     ap.add_argument("--host", choices=("workbuddy", "kimi"), default="workbuddy",
-                    help="目标宿主（决定默认安装位置），默认 workbuddy")
-    ap.add_argument("--dest", default=None, help="目标目录（给了就 --host 无关）")
+                    help="目标宿主（决定默认安装位置与 SKILL.md 注入口径），默认 workbuddy")
+    ap.add_argument("--dest", default=None, help="目标目录（给了就装这里；注入口径仍跟 --host 走）")
     ap.add_argument("--dry-run", action="store_true", help="只打印计划，不写文件")
     args = ap.parse_args(argv)
 
@@ -102,7 +111,15 @@ def main(argv=None):
         print("x 没找到任何文件，路径可能不对", file=sys.stderr)
         return 2
 
+    # workbuddy 装的是"注入版" SKILL.md（开放平台 frontmatter 全字段），
+    # 与上架 zip 同口径；kimi 装源码版（开放标准最小集）。
+    inject = args.host == "workbuddy"
+    if inject:
+        files = [(full, rel) for full, rel in files if rel != "SKILL.md"]
+
     src_rels = {rel for _, rel in files}
+    if inject:
+        src_rels.add("SKILL.md")  # 注入版也算"源里有"，否则会被当 stale 删掉
     stale = [rel for _, rel in walk_dest(dest) if rel not in src_rels] if os.path.isdir(dest) else []
 
     changed, skipped = [], []
@@ -116,6 +133,10 @@ def main(argv=None):
             os.makedirs(os.path.dirname(target) or dest, exist_ok=True)
             shutil.copy2(full, target)
             changed.append(rel)
+        if inject:
+            with open(os.path.join(dest, "SKILL.md"), "wb") as f:
+                f.write(workbuddy_skill_md())
+            changed.append("SKILL.md（注入宿主 frontmatter）")
         for rel in stale:
             os.remove(os.path.join(dest, rel))
             prune_empty(dest, rel)
@@ -127,6 +148,8 @@ def main(argv=None):
         print(f"{verb} {len(files)} 个文件：")
         for _, rel in files:
             print("  " + rel.replace(os.sep, "/"))
+        if inject:
+            print("  SKILL.md（注入宿主 frontmatter，与上架包同口径）")
         if stale:
             print(f"将清理 {len(stale)} 个源码里已不存在的文件：")
             for rel in stale:
@@ -139,10 +162,19 @@ def main(argv=None):
     for rel in stale:
         print("  - " + rel.replace(os.sep, "/"))
 
-    # 自检：同步后两边必须逐字节一致
-    bad = [rel for _, rel in walk_dest(dest)
-           if rel not in src_rels
-           or not filecmp.cmp(os.path.join(ROOT, rel), os.path.join(dest, rel), shallow=False)]
+    # 自检：同步后两边必须一致（SKILL.md 在注入目标比对注入字节）
+    src_of = {rel: full for full, rel in files}
+    bad = []
+    for _, rel in walk_dest(dest):
+        target = os.path.join(dest, rel)
+        if rel not in src_rels:
+            bad.append(rel)
+        elif rel == "SKILL.md" and inject:
+            with open(target, "rb") as f:
+                if f.read() != workbuddy_skill_md():
+                    bad.append(rel)
+        elif not filecmp.cmp(src_of[rel], target, shallow=False):
+            bad.append(rel)
     print()
     if bad:
         print("x 同步后仍不一致：" + "、".join(bad), file=sys.stderr)

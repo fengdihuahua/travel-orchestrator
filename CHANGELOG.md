@@ -1,5 +1,26 @@
 # 更新记录
 
+## v4.17.0（2026-10-15）
+
+**多宿主通用化 M1：开放标准 frontmatter + S0 环境自检 + 文档撤出。**
+
+- **frontmatter 收敛为 Agent Skills 开放标准最小集**：源码 SKILL.md 只留
+  `name` + `description`（中英双语合成单字段），扩展字段对严格宿主（Claude Code 等）
+  有拒载风险。WorkBuddy 开放平台额外要求的字段移入 `adapters/workbuddy/workbuddy.json`，
+  由 `tools/pack.py` 的 `workbuddy_skill_md()` 在**打包时注入** zip——源码保持干净，
+  WorkBuddy 上架链路不变。
+- **新增 S0 环境自检**：探测顺序 `python3` → `python` → `py -3` → `node`；
+  有 Python 走 `scripts/`，有 Node 且存在 `js/` 实现时走 `js/`（M3 落地），
+  都没有进**正式降级模式**（人工合并分片 + prompt 版红方清单 + 只交 Markdown，
+  自然专项查不到标 `unknown` 不许编）。
+- **海报生图能力探测**：生图参数不再写死宿主签名（原 `input_fidelity` / `size` /
+  固定裁剪比例改为"以宿主文档为准"）；无生图工具或生成失败 → 交骨架+提示词或如实说明。
+- **文档治理**：`USAGE.md` 撤出仓库（迁入本地 `dev/usage/`，gitignore）；
+  README 瘦身为一页项目卡片 + 分宿主安装表；`dev/` 目录整体不进仓库不进包。
+- 工具链：`pack.py` 增加 `EXTRA_ROOT_FILES` 宿主 manifest 映射与
+  `adapters/`、`dev/` 排除；`install.py` 复用同一映射；回归测试用例 7 重写为
+  "最小集断言 + 注入断言 + 版本三处同口径"。
+
 ## v4.16.0（2026-10-14）
 
 **多宿主通用化：不止 WorkBuddy，也能在 Kimi 里维护与使用。**

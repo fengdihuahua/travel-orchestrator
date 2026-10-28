@@ -7,10 +7,9 @@ SKILL.md 只留一句指向这里，是为了不让文件清单占掉每次加�
 
 ```
 travel-orchestrator/
-├── SKILL.md              # 主流程 S1-S10（模型每次都会读，尽量瘦）
-├── workbuddy.json        # 上架元数据（display_name / description_zh / description_en）
-├── README.md USAGE.md    # 给人看的说明
-├── CHANGELOG.md          # 变更史（SKILL.md 里的事项都往这儿写，别堆在正文）
+├── SKILL.md              # 主流程 S0-S10（模型每次都会读，尽量瘦；frontmatter 只有 name+description）
+├── adapters/             # 宿主专有 manifest（WorkBuddy workbuddy.json，打包时映射进包根）
+├── README.md CHANGELOG.md  # 给人看的说明与变更史（USAGE.md 已撤出到本地 dev/usage/）
 ├── references/           # 领域文档，模型按需读
 ├── scripts/              # 确定性脚本（分片/渲染/复核/取数）
 ├── assets/handbook.css   # 交付页样式源
@@ -21,8 +20,9 @@ travel-orchestrator/
 
 ## 上架包里有什么、没什么
 
-`tools/pack.py` 打出的 zip **只含**：`SKILL.md`、`workbuddy.json`、`references/`、`scripts/`、
-`assets/`，以及 README/LICENSE 一类根目录文件。
+`tools/pack.py` 打出的 zip **只含**：`SKILL.md`（注入 WorkBuddy 平台字段后的版本）、
+`workbuddy.json`（由 `adapters/workbuddy/workbuddy.json` 映射到包根）、`references/`、
+`scripts/`、`assets/`，以及 README/LICENSE 一类根目录文件。
 
 **必须排除**（打包脚本里有对应断言，别改回去）：
 
@@ -31,6 +31,7 @@ travel-orchestrator/
 | `examples/` | 平台只支持「根目录 / 二级目录 / 文件」，即 **skill 目录下最多 1 层子目录**；`examples/weihai-2d/` 下是 2 层，超限会被拒 |
 | `tests/` | 回归夹具，使用者用不到 |
 | `tools/` | 与安装口径一致（安装后不需要维护者工具） |
+| `adapters/` / `dev/` | 宿主 manifest 经 EXTRA_ROOT_FILES 映射进包（不以子目录进）；dev/ 是纯本地开发文档，不进仓库不进包 |
 | `__pycache__` / `.workbuddy` / `.git` | 中间产物与本地状态 |
 
 需要看示例或跑测试时，从[源码仓库](https://github.com/fengdihuahua/travel-orchestrator)取。
@@ -50,8 +51,8 @@ travel-orchestrator/
 | 工具 | 作用 |
 |---|---|
 | `verify_all.py` | 验收流水线：编译 → 测试 → 红方 → 渲染 → 一致性 → 示例同步。`--refresh` 顺带刷新示例产物 |
-| `install.py` | 源码 → 宿主 skill 目录增量同步（`--host workbuddy\|kimi`，默认 workbuddy） |
-| `pack.py` | 打包上架 zip（排除规则见上） |
+| `install.py` | 源码 → 宿主 skill 目录增量同步（`--host workbuddy\|kimi`，默认 workbuddy；workbuddy 装注入版 SKILL.md，kimi 装源码最小集） |
+| `pack.py` | 打包上架 zip（排除规则见上；SKILL.md 打包时注入 WorkBuddy 平台字段） |
 | `shot.py` | 截图（`--measure` 量元素、`--offsets` 滚动到指定位置、`--dsf 2` 看清小字） |
 | `probe.py` | 列出元素的盒模型/display，定位错位 |
 | `icon.py` | 生成市场头像（`_shots/icon.png`，纯 PIL） |

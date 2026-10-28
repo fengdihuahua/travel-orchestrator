@@ -1,14 +1,6 @@
 ---
 name: travel-orchestrator
-description: 旅行规划总编排（含自然观察专项 + 红方复核）。当用户需要一次完整旅行方案，或需求涉及行程规划、观鸟/观星/日出/赶海等自然观察、美食推荐、预算规划、灵感推荐、待办提醒、踩坑指南时调用。以完整工作流（需求澄清→灵感→调研→天气→自然专项→行程→核查→红方复核→交付→出发前复核）驱动全程；内置实时免费数据接口（鸟况/月相/日出日落/潮汐/霞光）、可执行的 red_team.py 规则引擎、反幻觉溯源与 MD+HTML 同源渲染交付。适用于国内/出境自由行、亲子游、自驾游、周末短途。
-display_name: 旅行规划总编排
-display_name_en: Travel Orchestrator
-category: productivity
-description_zh: "带红方复核的旅行规划：先把潮汐、日出、月落这些改不了的时刻锁死，再倒推整条动线。开场是逐层访谈而不是问卷，自然观察专项（观鸟 / 观星 / 日出 / 赶海）先做可行性核查再决定排不排，交付前由质疑方逐项挑刺，每个数字都能追到来源。产出同源的 Markdown 攻略与单文件离线 HTML 攻略页；AI 一层绘制的手绘地图海报作为可选项按需输出。"
-description_en: "Travel planning with an adversarial review pass: lock the moments that cannot move (tide, sunrise, moonset), then work the route backwards. Opens with a layered interview instead of a form, checks feasibility before scheduling any nature activity, and runs an adversarial pass before delivery. Every number traces back to a source. Ships a Markdown guide and a single-file offline HTML page; an AI-drawn hand-painted map poster is opt-in."
-version: 4.16.0
-author: travel-orchestrator
-agent_created: true
+description: Complete travel-planning orchestration with an adversarial red-team review pass. Use when the user needs a full trip plan (itinerary, food, budget, checklist, pitfalls) or nature-observation activities such as birding, stargazing, sunrise viewing, or beachcombing and tide pooling. Locks the moments that cannot move (tides, sunrise, moonset) first, then works the route backwards; verifies feasibility before scheduling any nature activity; challenges every number with a red-team pass before delivery, each figure traceable to a source. Ships a Markdown guide and a single-file offline HTML page rendered from the same data; an AI-drawn map poster is opt-in. 旅行规划总编排（含红方复核）：当用户需要一次完整旅行方案（行程/美食/预算/清单/踩坑），或涉及观鸟、观星、日出、赶海等自然观察专项时调用。先把潮汐、日出、月落等改不了的时刻锁死再倒推动线，专项先做可行性核查再决定排不排，交付前由质疑方逐项挑刺、每个数字可溯源。产出同源 Markdown 攻略与单文件离线 HTML 攻略页；AI 手绘地图海报为可选项。
 ---
 
 # Travel Orchestrator：旅行规划总编排
@@ -45,10 +37,11 @@ agent_created: true
 
 ## 核心工作流
 
-按以下 10 模块推进，全部由本 skill 内置完成。**主流程全编排；S1 是逐层访谈而不是一次抛问卷，自然观察专项由 S1 的 L3 环节确认后才展开**：
+按以下模块推进，全部由本 skill 内置完成。**主流程全编排；S1 是逐层访谈而不是一次抛问卷，自然观察专项由 S1 的 L3 环节确认后才展开**：
 
 | 模块 | 说明 |
 |---|---|
+| S0 环境自检 | 探测可用的脚本运行时（Python / Node），决定走哪套实现或降级模式；见下节 |
 | S1 需求澄清（访谈） | 一次一屏、逐层问需求（意图→硬约束→口味→自然专项→底线），写出「需求共识」并等用户确认；协议见 `references/intake-interview.md` |
 | S2 灵感与目的地推荐 | 无目的地时推荐 3-5 个候选并比较取舍，叠加专项偏好 |
 | S3 实时调研（门票/预约/交通/政策） | 建调研清单、记事实与来源，标注日期 |
@@ -62,7 +55,25 @@ agent_created: true
 | S10 修改与版本存档 | 保留旧版本，局部更新，可回退比较 |
 | ⭐ 自然观察专项（按需） | 观鸟 / 观星 / 日出 / 赶海（含火烧云评分）由 S1 的 L3 环节确认后才展开，见下节 |
 
-### S1 需求澄清（访谈，不是问卷）
+### S0 环境自检（每次开工第一步）
+
+本 skill 的确定性能力由脚本承担，但**脚本只是执行器，不是准入证**：没有脚本运行时也要能把活干完。
+开工先按下面的顺序探测，全程用探测到的命令名（下文统一写作 `python`，指探测到的那个）：
+
+1. 依次试 `python3 --version` → `python --version` → `py -3 --version`（Windows）→ `node --version`，
+   第一个成功的留下
+2. **有 Python** → 走 `scripts/`（Python 权威实现），全流程能力
+3. **只有 Node，且 skill 目录里有 `js/` 实现** → 走 `js/`，命令名与 `scripts/` 一一对应
+4. **都没有，或只有 Node 但没有 `js/` 实现** → 进**降级模式**（正式流程，不是临时发挥）：
+   - 分片是标准 JSON，自己读、自己就地合并（结构见 `references/data-schema.md`），
+     红方规则清单按 `references/red-team-checklist.md` 人工逐条过
+   - 自然专项能 web 搜索到官方数据就搜（潮汐/日出时刻以官方为准），搜不到的一律标 `unknown`，
+     ⛔ 不许凭记忆编时刻
+   - 只交付 **Markdown**；HTML 与海报明确告知"当前环境无脚本运行时，生成不了"，
+     不交付残次品、不假装能生成
+   - 交付话术里如实说明本次走了降级模式，哪些环节强度弱于正常模式
+
+降级模式下数据诚实原则不变：宁可标 `unknown`，不许编数字。
 
 **开工前先读 `references/intake-interview.md`（S1 执行手册），不要凭印象问。** 三条不可让步的门：
 
@@ -172,11 +183,15 @@ python scripts/red_team.py check travel-plan/<trip_id>   # 目录或 trip.json �
     也**不放任何海报入口**。
 - **海报是可选项，不强制问**：只有用户主动要、或交付时顺口提一句「还可以加一张 AI 手绘地图海报」
   被接住，才进入下面的 AI 一层绘制流程；不要为海报单独开一轮确认。
+- **生图能力先探测，参数不写死**：宿主有图像生成工具就用它，但**调用参数以该宿主自己的文档为准**
+  （下面是 WorkBuddy / Kimi 一家签名，仅作参考：`image1=sketch.png`、`input_fidelity="high"`、
+  `size="1024x1536"`），不保证其他宿主适用；宿主没有生图工具或连续生成失败 →
+  如实说"当前环境出不了 AI 海报"，把 `sketch.png` + `prompt.txt` 交给用户自行拿去生图，
+  再不行就只交文字攻略，⛔ 不假装出了图
 - **AI 一层绘制海报**（可选，高保真手绘版）：`python scripts/poster_ai.py <方案目录> --day N --out _tmp/ai`
-  → `sketch.png`（骨架）+ `prompt.txt`（提示词）+ `meta.json`；把骨架当**底稿**交给图像模型
-  （`image1=sketch.png`、`input_fidelity="high"`、`size="1024x1536"`、`prompt` 取 `prompt.txt` 全文），
-  最后裁掉右下角水印（约底部 4.5%）。加 `--plain` 则走**纯文字版**：不传骨架，
-  位置全靠提示词写死（实测位置比骨架版准）。
+  → `sketch.png`（骨架）+ `prompt.txt`（提示词）+ `meta.json`；把骨架当**底稿**交给图像模型，
+  提示词取 `prompt.txt` 全文；对方出水印的，按实际水印位置裁剪（不承诺固定比例）。
+  加 `--plain` 则走**纯文字版**：不传骨架，位置全靠提示词写死（实测位置比骨架版准）。
   🔴 出图后**照着 `checklist.txt` 逐字对比**（地名/题签/行程），有一处不对就重生成。
   🔴 **开工前必读 `references/poster-ai-spec.md`**（唯一口径，末尾一节
   列了不要用的做法）；跑完必须打印「两两方位自检：N 项，错 0 项 ✅」才可生图
@@ -281,9 +296,8 @@ python scripts/red_team.py check travel-plan/<trip_id>   # 目录或 trip.json �
 
 ---
 
-*v4.16.0 | travel-orchestrator：多宿主通用化（WorkBuddy / Kimi 双端安装）+
-撤掉强制问海报的对话门（改为主动才做、可顺口提一句）+
-主流程 S1-S10 全编排 + S6.5 红方复核（对抗式挑刺）+
-自然观察专项按需触发（观鸟 / 观星 / 日出 / 赶海，含火烧云评分）+ 反幻觉溯源 + 去 AI 味交付*
+*v4.17.0 | travel-orchestrator：SKILL.md frontmatter 收敛为开放标准最小集
+（name+description 双语），宿主专有字段由 pack.py 打包时从 adapters/workbuddy/workbuddy.json
+注入；新增 S0 环境自检与正式降级模式、海报生图能力探测；USAGE.md 撤入本地 dev/，README 瘦身*
 
 *完整变更历史见 [CHANGELOG.md](CHANGELOG.md)。*
